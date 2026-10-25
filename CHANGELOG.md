@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.2 - 2026-10-25
+
+- Remove helper text beneath saved display calibrations to keep each row compact.
+
 ## 0.4.1 - 2026-10-25
 
 - Replace the saved-scenario table and nested calibration cards with compact, full-width rows.

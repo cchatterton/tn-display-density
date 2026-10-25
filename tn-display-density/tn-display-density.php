@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.4.1
+ * Version: 0.4.2
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.4.1');
+define('TDD_VERSION', '0.4.2');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -153,6 +153,7 @@ add_action('admin_init', 'tdd_register_settings');
 
 function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false, $compact = false) {
     $slider_max = max(2, ceil((float) $value));
+    $show_help = !$compact || $help !== '';
     ?>
     <div class="tdd-slider<?php echo $compact ? ' tdd-slider--compact' : ''; ?>" data-tdd-slider>
         <div class="tdd-slider__top">
@@ -164,21 +165,23 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
                 <input type="number" id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>"
                     value="<?php echo esc_attr((string) $value); ?>" min="0" step="any" required
                     <?php if ($compact) : ?>aria-label="<?php echo esc_attr(sprintf(__('Exact %s', 'tn-display-density'), $label)); ?>"<?php endif; ?>
-                    data-tdd-value aria-describedby="<?php echo esc_attr($id . '_help'); ?>"
+                    data-tdd-value <?php if ($show_help) : ?>aria-describedby="<?php echo esc_attr($id . '_help'); ?>"<?php endif; ?>
                     <?php disabled($disabled); ?>>
             </div>
         </div>
         <input type="range" id="<?php echo esc_attr($id . '_range'); ?>"
             min="0" max="<?php echo esc_attr((string) $slider_max); ?>" step="0.1"
             value="<?php echo esc_attr((string) $value); ?>" data-tdd-range
-            aria-describedby="<?php echo esc_attr($id . '_help'); ?>" <?php disabled($disabled); ?>>
+            <?php if ($show_help) : ?>aria-describedby="<?php echo esc_attr($id . '_help'); ?>"<?php endif; ?> <?php disabled($disabled); ?>>
         <div class="tdd-slider__scale" aria-hidden="true">
             <span>0</span><span data-tdd-range-max><?php echo esc_html((string) $slider_max); ?></span>
         </div>
-        <p class="tdd-slider__help" id="<?php echo esc_attr($id . '_help'); ?>">
-            <?php if (!$compact) : ?><?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?><?php endif; ?>
-            <?php echo esc_html($help); ?>
-        </p>
+        <?php if ($show_help) : ?>
+            <p class="tdd-slider__help" id="<?php echo esc_attr($id . '_help'); ?>">
+                <?php if (!$compact) : ?><?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?><?php endif; ?>
+                <?php echo esc_html($help); ?>
+            </p>
+        <?php endif; ?>
     </div>
     <?php
 }
@@ -255,9 +258,7 @@ function tdd_render_saved_displays() {
                             $field . '[value]',
                             $profile['value'],
                             sprintf(__('Calibration for %s', 'tn-display-density'), $title),
-                            $profile['platform'] === 'mac'
-                                ? __('0 uses native zoom; a positive value sets the zoom factor.', 'tn-display-density')
-                                : __('0 uses native zoom; 1 applies full inverse-DPR compensation.', 'tn-display-density'),
+                            '',
                             false,
                             true
                         );

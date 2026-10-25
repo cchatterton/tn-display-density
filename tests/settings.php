@@ -86,6 +86,8 @@ check(strpos($saved_markup, 'class="tdd-saved-row"') !== false, 'Saved display u
 check(strpos($saved_markup, 'tdd-slider--compact') !== false, 'Saved slider uses compact layout');
 check(strpos($saved_markup, '<table') === false, 'Saved display does not use the redundant table');
 check(strpos($saved_markup, 'Slider steps:') === false, 'Saved row omits repeated slider instructions');
+check(strpos($saved_markup, 'tdd-slider__help') === false, 'Saved row omits calibration helper text');
+check(strpos($saved_markup, 'aria-describedby="tdd_profile_0_help"') === false, 'Saved slider has no missing help reference');
 $resaved = tdd_sanitize_settings(array('windows_compensation' => '0.85', 'mac_compensation' => '0',
     'profiles' => array_values($saved['profiles']), 'save_current' => '1',
     'current' => array_diff_key($current, array('label' => true))));

@@ -3,7 +3,7 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.4.1
+Stable tag: 0.4.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -26,6 +26,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Appearance > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.4.2 =
+* Remove helper text beneath saved display calibrations.
 
 = 0.4.1 =
 * Use compact full-width rows for saved calibrations and remove the optional scenario name field.
