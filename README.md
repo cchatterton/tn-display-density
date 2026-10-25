@@ -1,10 +1,10 @@
 # TN Display Density
 
 Author: Techn  
-Version: 0.1.0  
+Version: 0.1.1  
 Branding mode: Author Branded  
 
-A small WordPress plugin for desktop display zoom calibration. It uses the Settings API and vanilla JavaScript. Windows defaults to inverse-DPR calibration `0.85`; macOS defaults to native zoom (`0`). Mobile and tablet devices are untouched.
+A small WordPress plugin that uses browser zoom to compensate for desktop display scaling. It uses the Settings API and vanilla JavaScript. Windows defaults to inverse-DPR calibration `0.85`; macOS defaults to native zoom (`0`). Mobile and tablet devices are untouched.
 
 The runtime feature uses one PHP file and one JavaScript file. The package also includes the standard TN Update Controller client, `LICENSE`, and `readme.txt`. The plugin stores only one WordPress option, `tdd_settings`.
 

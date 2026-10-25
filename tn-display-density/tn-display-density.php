@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: TN Display Density
- * Description: Calibrates desktop display zoom for Windows and macOS.
- * Version: 0.1.0
+ * Description: Compensates for desktop display scaling on Windows and macOS.
+ * Version: 0.1.1
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.1.0');
+define('TDD_VERSION', '0.1.1');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -138,7 +138,7 @@ function tdd_render_settings_page() {
     ?>
     <div class="wrap">
         <h1><?php esc_html_e('Display Density', 'tn-display-density'); ?></h1>
-        <p><?php esc_html_e('Adjust desktop display zoom. Mobile and tablet devices are left unchanged.', 'tn-display-density'); ?></p>
+        <p><?php esc_html_e('Compensate for desktop display scaling. Mobile and tablet devices are left unchanged.', 'tn-display-density'); ?></p>
         <?php settings_errors('tdd_settings'); ?>
         <form action="options.php" method="post">
             <?php
