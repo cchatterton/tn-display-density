@@ -67,6 +67,12 @@ foreach (array('windows_frontend_compensation', 'windows_admin_compensation',
     check(strpos($settings_markup, 'name="tdd_settings[' . $key . ']"') !== false, $key . ' is editable');
 }
 check(strpos($settings_markup, 'name="tdd_settings[scope]"') === false, 'Global scope control removed');
+check(substr_count($settings_markup, 'Slider steps: 0.1.') === 1, 'Slider guidance appears once above platform defaults');
+check(strpos($settings_markup, 'These apply when no saved display scenario matches.') === false, 'Old defaults introduction removed');
+foreach (array('tdd_windows_frontend_compensation', 'tdd_windows_admin_compensation',
+    'tdd_mac_frontend_compensation', 'tdd_mac_admin_compensation') as $id) {
+    check(strpos($settings_markup, 'id="' . $id . '_help"') === false, $id . ' has no repeated helper text');
+}
 
 $GLOBALS['saved_tdd_settings'] = array(
     'windows_compensation' => 1.1, 'mac_compensation' => 0.5, 'scope' => 'all',

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.5 - 2026-10-25
+
+- Place slider and calibration guidance once above the four platform defaults instead of repeating it under each control.
+
 ## 0.5.4 - 2026-10-25
 
 - Remove the visible Apply to label above calibration area selectors while retaining an accessible group name.

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.5.4
+ * Version: 0.5.5
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.5.4');
+define('TDD_VERSION', '0.5.5');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -208,7 +208,7 @@ add_action('admin_init', 'tdd_register_settings');
 
 function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false, $compact = false) {
     $slider_max = max(2, ceil((float) $value));
-    $show_help = !$compact || $help !== '';
+    $show_help = $help !== '';
     ?>
     <div class="tdd-slider<?php echo $compact ? ' tdd-slider--compact' : ''; ?>" data-tdd-slider>
         <div class="tdd-slider__top">
@@ -233,7 +233,6 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
         </div>
         <?php if ($show_help) : ?>
             <p class="tdd-slider__help" id="<?php echo esc_attr($id . '_help'); ?>">
-                <?php if (!$compact) : ?><?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?><?php endif; ?>
                 <?php echo esc_html($help); ?>
             </p>
         <?php endif; ?>
@@ -420,7 +419,7 @@ function tdd_render_settings_page() {
                 <div class="tdd-panel__heading">
                     <p class="tdd-panel__eyebrow"><?php esc_html_e('DEFAULTS', 'tn-display-density'); ?></p>
                     <h2 id="tdd-defaults-title"><?php esc_html_e('Platform defaults', 'tn-display-density'); ?></h2>
-                    <p><?php esc_html_e('These apply when no saved display scenario matches.', 'tn-display-density'); ?></p>
+                    <p><?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed. 0 uses native zoom. On Windows, 1 applies full inverse-DPR compensation; higher values make a stronger adjustment. On Mac, positive values set zoom directly.', 'tn-display-density'); ?></p>
                 </div>
                 <div class="tdd-default-grid">
                     <?php
@@ -429,28 +428,28 @@ function tdd_render_settings_page() {
                         'tdd_settings[windows_frontend_compensation]',
                         $settings['windows_frontend_compensation'],
                         __('Windows frontend', 'tn-display-density'),
-                        __('0 uses native zoom; 1 applies full inverse-DPR compensation. Higher values make a stronger adjustment.', 'tn-display-density')
+                        ''
                     );
                     tdd_render_slider(
                         'tdd_windows_admin_compensation',
                         'tdd_settings[windows_admin_compensation]',
                         $settings['windows_admin_compensation'],
                         __('Windows WordPress admin', 'tn-display-density'),
-                        __('0 uses native zoom; 1 applies full inverse-DPR compensation. Higher values make a stronger adjustment.', 'tn-display-density')
+                        ''
                     );
                     tdd_render_slider(
                         'tdd_mac_frontend_compensation',
                         'tdd_settings[mac_frontend_compensation]',
                         $settings['mac_frontend_compensation'],
                         __('Mac frontend', 'tn-display-density'),
-                        __('0 uses native zoom. A positive factor applies to standard-density displays; Retina-range displays stay native unless calibrated separately.', 'tn-display-density')
+                        ''
                     );
                     tdd_render_slider(
                         'tdd_mac_admin_compensation',
                         'tdd_settings[mac_admin_compensation]',
                         $settings['mac_admin_compensation'],
                         __('Mac WordPress admin', 'tn-display-density'),
-                        __('0 uses native zoom. A positive factor applies to standard-density displays; Retina-range displays stay native unless calibrated separately.', 'tn-display-density')
+                        ''
                     );
                     ?>
                 </div>

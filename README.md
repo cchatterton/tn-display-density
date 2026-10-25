@@ -1,7 +1,7 @@
 # TN Display Density
 
 Author: Techn
-Version: 0.5.4
+Version: 0.5.5
 Branding mode: Author Branded
 
 A small WordPress plugin that uses browser zoom to compensate for desktop display scaling. It uses the Settings API and vanilla JavaScript. Windows defaults to inverse-DPR calibration `0.85`; macOS defaults to native zoom (`0`). A configured Mac default factor applies when effective DPR is below `1.5`; Retina-range displays remain native. Mobile and tablet devices are untouched.
