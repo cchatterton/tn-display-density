@@ -1,0 +1,93 @@
+.tdd-admin {
+    --tdd-navy: #002840;
+    --tdd-navy-deep: #001d31;
+    --tdd-orange: #ff6b00;
+    --tdd-orange-dark: #d95b00;
+    --tdd-text: #0a263b;
+    --tdd-muted: #5c6d79;
+    --tdd-border: #d5dfe5;
+    --tdd-surface: #fff;
+    --tdd-soft: #f2f6f8;
+    max-width: 90rem;
+    color: var(--tdd-text);
+}
+.tdd-admin * { box-sizing: border-box; }
+.tdd-admin .tdd-hero {
+    position: relative;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 2rem;
+    min-height: 10.25rem;
+    padding: 1.75rem 2rem;
+    margin: 1.5rem 0 1.75rem;
+    color: #fff;
+    background: linear-gradient(115deg, var(--tdd-navy-deep), #063b5d 70%, #125c8a);
+    border-radius: .75rem;
+}
+.tdd-admin .tdd-hero__version { position: absolute; top: 1.5rem; right: 2rem; color: #d5e6f0; font-weight: 600; }
+.tdd-admin .tdd-hero__copy { min-width: 0; }
+.tdd-admin .tdd-hero__eyebrow, .tdd-admin .tdd-panel__eyebrow {
+    margin: 0 0 .65rem;
+    color: var(--tdd-orange);
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+.tdd-admin .tdd-hero h2 { margin: 0; color: #fff; font-size: 1.8rem; line-height: 1.2; }
+.tdd-admin .tdd-hero__lead { max-width: 42rem; margin: .75rem 0 0; color: #fff; font-size: 1rem; }
+.tdd-admin .tdd-hero__chips { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .5rem; padding-top: 2.5rem; }
+.tdd-admin .tdd-hero__chips span { padding: .45rem .8rem; border: .0625rem solid #ffffff55; border-radius: 2rem; background: #ffffff18; color: #fff; font-size: .8rem; font-weight: 600; white-space: nowrap; }
+.tdd-admin .tdd-panel { margin: 0 0 1.25rem; padding: 1.5rem 1.75rem; background: var(--tdd-surface); border: .0625rem solid var(--tdd-border); border-radius: .75rem; box-shadow: 0 .15rem .65rem #001d310d; }
+.tdd-admin .tdd-panel__heading { margin-bottom: 1.25rem; }
+.tdd-admin .tdd-panel__heading h2 { margin: 0; color: var(--tdd-text); font-size: 1.35rem; line-height: 1.3; }
+.tdd-admin .tdd-panel__heading p:last-child { margin: .4rem 0 0; color: var(--tdd-muted); }
+.tdd-admin .tdd-environment { display: inline-block; margin: 0 0 1.3rem; padding: .55rem .8rem; background: var(--tdd-soft); border: .0625rem solid var(--tdd-border); border-radius: .4rem; font-weight: 600; }
+.tdd-admin .tdd-default-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.tdd-admin .tdd-slider { padding: 1rem 1.15rem; border: .0625rem solid var(--tdd-border); border-radius: .55rem; background: #fff; }
+.tdd-admin .tdd-slider__top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .8rem; }
+.tdd-admin .tdd-slider__label { font-size: .98rem; font-weight: 700; color: var(--tdd-text); }
+.tdd-admin .tdd-slider__exact { display: flex; align-items: center; gap: .55rem; }
+.tdd-admin .tdd-slider__exact label { color: var(--tdd-muted); font-size: .82rem; }
+.tdd-admin .tdd-slider__exact input { width: 5.5rem; min-height: 2rem; margin: 0; text-align: right; }
+.tdd-admin .tdd-slider input[type="range"] { display: block; width: 100%; height: 1.6rem; margin: 0; accent-color: var(--tdd-orange-dark); cursor: pointer; }
+.tdd-admin .tdd-slider input[type="range"]:disabled { cursor: not-allowed; }
+.tdd-admin .tdd-slider__scale { display: flex; justify-content: space-between; color: var(--tdd-muted); font-size: .75rem; }
+.tdd-admin .tdd-slider__help { margin: .7rem 0 0; color: var(--tdd-muted); line-height: 1.45; }
+.tdd-admin .tdd-name-field { margin: 1.2rem 0 0; }
+.tdd-admin .tdd-name-field label { display: block; margin-bottom: .4rem; font-weight: 700; }
+.tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.tdd-admin .tdd-panel__footer { margin-top: 1.25rem; padding-top: 1.1rem; border-top: .0625rem solid var(--tdd-border); }
+.tdd-admin .tdd-panel__footer p, .tdd-admin .tdd-save-bar p { margin: 0; color: var(--tdd-muted); }
+.tdd-admin .tdd-secondary.button, .tdd-admin .tdd-primary.button { min-height: 2.4rem; padding: .2rem 1rem; font-weight: 700; }
+.tdd-admin .tdd-secondary.button { color: var(--tdd-navy); border-color: var(--tdd-navy); background: #fff; }
+.tdd-admin .tdd-secondary.button:hover { color: #fff; background: var(--tdd-navy); }
+.tdd-admin .tdd-primary.button { color: #fff; border-color: var(--tdd-navy); background: var(--tdd-navy); }
+.tdd-admin .tdd-primary.button:hover { border-color: var(--tdd-navy-deep); background: var(--tdd-navy-deep); }
+.tdd-admin .tdd-save-bar { padding: .5rem 0 2rem; }
+.tdd-admin .tdd-table-scroll { overflow-x: auto; }
+.tdd-admin .tdd-profiles { border-color: var(--tdd-border); }
+.tdd-admin .tdd-profiles th, .tdd-admin .tdd-profiles td { padding: .85rem; vertical-align: middle; }
+.tdd-admin .tdd-profiles th:first-child { min-width: 13rem; }
+.tdd-admin .tdd-profiles td:nth-child(2) { min-width: 20rem; }
+.tdd-admin .tdd-profiles .tdd-slider { max-width: 34rem; }
+.tdd-admin .tdd-profile-detail { display: block; margin-top: .25rem; color: var(--tdd-muted); font-weight: 400; }
+.tdd-admin .tdd-remove { display: inline-flex; align-items: center; gap: .35rem; }
+.tdd-admin .tdd-empty { margin: 0; padding: 1rem; color: var(--tdd-muted); background: var(--tdd-soft); border-radius: .4rem; }
+.tdd-admin .tdd-help { color: var(--tdd-muted); }
+.tdd-admin :is(input, button, a):focus-visible { outline: .18rem solid var(--tdd-orange-dark); outline-offset: .16rem; box-shadow: none; }
+@media (max-width: 60rem) {
+    .tdd-admin .tdd-hero { align-items: start; flex-direction: column; gap: .5rem; }
+    .tdd-admin .tdd-hero__chips { justify-content: flex-start; padding-top: 0; }
+}
+@media (max-width: 48rem) {
+    .tdd-admin .tdd-hero { padding: 1.5rem; }
+    .tdd-admin .tdd-hero__version { right: 1.5rem; }
+    .tdd-admin .tdd-panel { padding: 1.2rem; }
+    .tdd-admin .tdd-default-grid { grid-template-columns: 1fr; }
+    .tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { align-items: stretch; flex-direction: column; }
+}
+@media (max-width: 35rem) {
+    .tdd-admin .tdd-hero__version { position: static; order: -1; align-self: flex-end; }
+    .tdd-admin .tdd-slider__top { align-items: flex-start; flex-direction: column; }
+}

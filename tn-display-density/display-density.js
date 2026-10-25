@@ -83,13 +83,39 @@
     }
 
     function setupAdmin() {
+        const sliders = document.querySelectorAll('[data-tdd-slider]');
+        sliders.forEach(function (slider) {
+            const range = slider.querySelector('[data-tdd-range]');
+            const value = slider.querySelector('[data-tdd-value]');
+            const maximum = slider.querySelector('[data-tdd-range-max]');
+
+            function syncFromValue() {
+                const number = Number(value.value);
+                if (!Number.isFinite(number) || number < 0) {
+                    return;
+                }
+                const ceiling = Math.max(2, Math.ceil(number));
+                range.max = String(ceiling);
+                maximum.textContent = String(ceiling);
+                range.value = String(number);
+            }
+
+            range.addEventListener('input', function () {
+                value.value = range.value;
+            });
+            value.addEventListener('input', syncFromValue);
+            slider.syncFromValue = syncFromValue;
+            syncFromValue();
+        });
+
         const summary = document.getElementById('tdd_current_summary');
         const value = document.getElementById('tdd_current_value');
+        const currentRange = document.getElementById('tdd_current_value_range');
         const label = document.getElementById('tdd_current_label');
         const button = document.getElementById('tdd_save_current');
         let currentKey = null;
 
-        if (!summary || !value || !label || !button) {
+        if (!summary || !value || !currentRange || !label || !button) {
             return function () {};
         }
 
@@ -99,6 +125,7 @@
             if (!display) {
                 summary.textContent = 'This display could not be identified. Calibration is unavailable here.';
                 value.disabled = true;
+                currentRange.disabled = true;
                 label.disabled = true;
                 button.disabled = true;
                 currentKey = null;
@@ -116,6 +143,10 @@
             if (key !== currentKey) {
                 const calibration = profile ? Number(profile.value) : fallbackCalibration(display);
                 value.value = validCalibration(calibration) ? String(calibration) : '0';
+                const currentSlider = value.closest('[data-tdd-slider]');
+                if (currentSlider && currentSlider.syncFromValue) {
+                    currentSlider.syncFromValue();
+                }
                 label.value = profile && profile.label ? profile.label : '';
                 document.getElementById('tdd_current_platform').value = display.platform;
                 document.getElementById('tdd_current_dpr').value = display.dpr.toFixed(2);
@@ -125,6 +156,7 @@
             }
 
             value.disabled = false;
+            currentRange.disabled = false;
             label.disabled = false;
             button.disabled = false;
         };

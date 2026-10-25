@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0 - 2026-10-25
+
+- Move Display Density to Appearance and introduce the branded admin layout.
+- Add drag sliders paired with exact numeric inputs for defaults and saved scenarios.
+
 ## 0.2.1 - 2026-10-25
 
 - Remove arbitrary calibration limits while rejecting invalid values and non-positive calculated zoom.

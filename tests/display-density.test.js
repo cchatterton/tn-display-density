@@ -12,10 +12,26 @@ function browser(userAgent, dpr, width, height, settings, admin = false) {
         'tdd_current_width', 'tdd_current_height']) {
         elements[id] = {value: '', textContent: '', disabled: true, max: ''};
     }
+    const sliders = [];
+    if (admin) {
+        for (const id of ['tdd_current_value', 'tdd_windows_compensation', 'tdd_mac_compensation']) {
+            const range = {value: '', max: '2', disabled: true, listeners: {}, addEventListener(name, callback) {this.listeners[name] = callback;}};
+            const value = elements[id] || {value: '0', disabled: false, listeners: {}, addEventListener(name, callback) {this.listeners[name] = callback;}};
+            value.listeners = {};
+            value.addEventListener = function (name, callback) {this.listeners[name] = callback;};
+            const maximum = {textContent: '2'};
+            const slider = {querySelector: selector => selector === '[data-tdd-range]' ? range : selector === '[data-tdd-value]' ? value : maximum};
+            value.closest = () => slider;
+            elements[id] = value;
+            elements[id + '_range'] = range;
+            sliders.push(slider);
+        }
+    }
     const root = {style: {zoom: ''}};
     const document = {
         documentElement: root,
         getElementById: id => elements[id],
+        querySelectorAll: () => sliders,
         addEventListener: (name, callback) => {listeners[name] = callback;}
     };
     const window = {
@@ -33,7 +49,7 @@ function browser(userAgent, dpr, width, height, settings, admin = false) {
     };
     const navigator = {userAgent, platform: '', maxTouchPoints: 0};
     vm.runInNewContext(script, {window, document, navigator, Number});
-    return {window, root, elements, listeners};
+    return {window, root, elements, listeners, sliders};
 }
 
 const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -105,6 +121,14 @@ const admin = browser(mac, 2, 1440, 900, macSettings, true);
 assert.equal(admin.root.style.zoom, '');
 assert.equal(admin.elements.tdd_current_value.value, '0.9');
 assert.equal(admin.elements.tdd_current_label.value, 'More Space');
+assert.equal(admin.elements.tdd_current_value_range.value, '0.9');
+admin.elements.tdd_current_value_range.value = '1.1';
+admin.elements.tdd_current_value_range.listeners.input();
+assert.equal(admin.elements.tdd_current_value.value, '1.1');
+admin.elements.tdd_current_value.value = '2.5';
+admin.elements.tdd_current_value.listeners.input();
+assert.equal(admin.elements.tdd_current_value_range.max, '3');
+assert.equal(admin.elements.tdd_current_value_range.value, '2.5');
 assert.equal(admin.elements.tdd_save_current.disabled, false);
 admin.window.screen.width = 1920;
 admin.window.screen.height = 1080;

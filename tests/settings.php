@@ -12,6 +12,8 @@ function get_option($name, $default = null) { return $GLOBALS['saved_tdd_setting
 function wp_parse_args($saved, $defaults) { return array_merge($defaults, $saved); }
 function __($text) { return $text; }
 function add_settings_error($setting, $code, $message) { $GLOBALS['tdd_errors'][] = $message; }
+function disabled($condition) { if ($condition) echo 'disabled'; }
+function esc_html($text) { return htmlspecialchars($text, ENT_QUOTES); }
 function esc_attr($text) { return htmlspecialchars($text, ENT_QUOTES); }
 function esc_html_e($text) { echo htmlspecialchars($text, ENT_QUOTES); }
 
@@ -31,9 +33,11 @@ check($defaults['profiles'] === array(), 'Profiles default');
 check(isset($GLOBALS['tnuc_clients']['tn-display-density/tn-display-density.php']), 'Controller client registration');
 
 ob_start();
-tdd_render_windows_field();
+tdd_render_slider('windows', 'tdd_settings[windows_compensation]', 1.1, 'Windows compensation', 'Help');
 $windows_field = ob_get_clean();
-check(strpos($windows_field, 'max=') === false, 'Windows input has no arbitrary maximum');
+check(strpos($windows_field, 'type="range"') !== false, 'Windows calibration has a slider');
+check(strpos($windows_field, 'type="number"') !== false, 'Windows calibration has an exact number input');
+check(strpos($windows_field, 'max="2"') !== false, 'Slider has a soft range');
 check(strpos($windows_field, 'step="any"') !== false, 'Windows input accepts precise values');
 
 $stronger = tdd_sanitize_settings(array('windows_compensation' => '1.1', 'mac_compensation' => '0',
