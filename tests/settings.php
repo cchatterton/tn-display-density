@@ -57,6 +57,7 @@ ob_start();
 tdd_render_current_display();
 $current_field = ob_get_clean();
 check(strpos($current_field, 'id="tdd_preview_current"') !== false, 'Current display has a preview control');
+check(strpos($current_field, 'tdd_current_label') === false, 'Current display has no optional scenario name');
 
 $stronger = tdd_sanitize_settings(array('windows_compensation' => '1.1', 'mac_compensation' => '0',
     'save_current' => '1', 'current' => array('platform' => 'windows', 'dpr' => '1.25',
@@ -78,6 +79,17 @@ check(isset($saved['profiles']['mac|1.00|1920x1080']), 'Current scenario saved')
 check($saved['profiles']['mac|1.00|1920x1080']['label'] === 'Dell monitor', 'Scenario label sanitized');
 
 $GLOBALS['saved_tdd_settings'] = $saved;
+ob_start();
+tdd_render_saved_displays();
+$saved_markup = ob_get_clean();
+check(strpos($saved_markup, 'class="tdd-saved-row"') !== false, 'Saved display uses a compact row');
+check(strpos($saved_markup, 'tdd-slider--compact') !== false, 'Saved slider uses compact layout');
+check(strpos($saved_markup, '<table') === false, 'Saved display does not use the redundant table');
+check(strpos($saved_markup, 'Slider steps:') === false, 'Saved row omits repeated slider instructions');
+$resaved = tdd_sanitize_settings(array('windows_compensation' => '0.85', 'mac_compensation' => '0',
+    'profiles' => array_values($saved['profiles']), 'save_current' => '1',
+    'current' => array_diff_key($current, array('label' => true))));
+check($resaved['profiles']['mac|1.00|1920x1080']['label'] === 'Dell monitor', 'Existing scenario label survives save without name field');
 $removed = tdd_sanitize_settings(array('windows_compensation' => '0.85', 'mac_compensation' => '0',
     'profiles' => array(array_merge($saved['profiles']['mac|1.00|1920x1080'], array('remove' => '1')))));
 check($removed['profiles'] === array(), 'Scenario removal');

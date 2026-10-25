@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-10-25
+
+- Replace the saved-scenario table and nested calibration cards with compact, full-width rows.
+- Remove repeated headings and instructions from the saved section.
+- Remove the optional scenario name field; preserve labels already stored on saved scenarios.
+
 ## 0.4.0 - 2026-10-25
 
 - Move sliders in 0.1 increments while retaining precise numeric entry.

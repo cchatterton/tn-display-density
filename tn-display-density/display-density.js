@@ -113,13 +113,12 @@
         const summary = document.getElementById('tdd_current_summary');
         const value = document.getElementById('tdd_current_value');
         const currentRange = document.getElementById('tdd_current_value_range');
-        const label = document.getElementById('tdd_current_label');
         const button = document.getElementById('tdd_save_current');
         const previewButton = document.getElementById('tdd_preview_current');
         const previewStatus = document.getElementById('tdd_preview_status');
         let currentKey = null;
 
-        if (!summary || !value || !currentRange || !label || !button || !previewButton || !previewStatus) {
+        if (!summary || !value || !currentRange || !button || !previewButton || !previewStatus) {
             return function () {};
         }
 
@@ -144,7 +143,6 @@
                 summary.textContent = 'This display could not be identified. Calibration is unavailable here.';
                 value.disabled = true;
                 currentRange.disabled = true;
-                label.disabled = true;
                 button.disabled = true;
                 previewButton.disabled = true;
                 currentKey = null;
@@ -166,7 +164,6 @@
                 if (currentSlider && currentSlider.syncFromValue) {
                     currentSlider.syncFromValue();
                 }
-                label.value = profile && profile.label ? profile.label : '';
                 document.getElementById('tdd_current_platform').value = display.platform;
                 document.getElementById('tdd_current_dpr').value = display.dpr.toFixed(2);
                 document.getElementById('tdd_current_width').value = String(display.width);
@@ -176,7 +173,6 @@
 
             value.disabled = false;
             currentRange.disabled = false;
-            label.disabled = false;
             button.disabled = false;
             previewButton.disabled = false;
         };

@@ -54,8 +54,6 @@
 .tdd-admin .tdd-slider input[type="range"]:disabled { cursor: not-allowed; }
 .tdd-admin .tdd-slider__scale { display: flex; justify-content: space-between; color: var(--tdd-muted); font-size: .75rem; }
 .tdd-admin .tdd-slider__help { margin: .7rem 0 0; color: var(--tdd-muted); line-height: 1.45; }
-.tdd-admin .tdd-name-field { margin: 1.2rem 0 0; }
-.tdd-admin .tdd-name-field label { display: block; margin-bottom: .4rem; font-weight: 700; }
 .tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .tdd-admin .tdd-panel__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; }
 .tdd-admin .tdd-preview-status { min-height: 1.3rem; margin: .45rem 0 0; color: var(--tdd-muted); }
@@ -67,14 +65,19 @@
 .tdd-admin .tdd-primary.button { color: #fff; border-color: var(--tdd-navy); background: var(--tdd-navy); }
 .tdd-admin .tdd-primary.button:hover { border-color: var(--tdd-navy-deep); background: var(--tdd-navy-deep); }
 .tdd-admin .tdd-save-bar { padding: .5rem 0 2rem; }
-.tdd-admin .tdd-table-scroll { overflow-x: auto; }
-.tdd-admin .tdd-profiles { border-color: var(--tdd-border); }
-.tdd-admin .tdd-profiles th, .tdd-admin .tdd-profiles td { padding: .85rem; vertical-align: middle; }
-.tdd-admin .tdd-profiles th:first-child { min-width: 13rem; }
-.tdd-admin .tdd-profiles td:nth-child(2) { min-width: 20rem; }
-.tdd-admin .tdd-profiles .tdd-slider { max-width: 34rem; }
+.tdd-admin .tdd-saved-list { margin: 0; padding: 0; list-style: none; border: .0625rem solid var(--tdd-border); border-radius: .55rem; overflow: hidden; }
+.tdd-admin .tdd-saved-row { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(20rem, 2.4fr) auto; align-items: center; gap: 1.25rem; margin: 0; padding: .9rem 1rem; background: var(--tdd-surface); }
+.tdd-admin .tdd-saved-row + .tdd-saved-row { border-top: .0625rem solid var(--tdd-border); }
+.tdd-admin .tdd-saved-row__scenario, .tdd-admin .tdd-saved-row__calibration { min-width: 0; }
+.tdd-admin .tdd-saved-row__title { display: block; overflow-wrap: anywhere; }
 .tdd-admin .tdd-profile-detail { display: block; margin-top: .25rem; color: var(--tdd-muted); font-weight: 400; }
-.tdd-admin .tdd-remove { display: inline-flex; align-items: center; gap: .35rem; }
+.tdd-admin .tdd-slider--compact { display: grid; grid-template-columns: minmax(8rem, 1fr) auto; align-items: center; gap: 0 1rem; padding: 0; border: 0; border-radius: 0; }
+.tdd-admin .tdd-slider--compact .tdd-slider__top { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
+.tdd-admin .tdd-slider--compact input[type="range"] { grid-column: 1; grid-row: 1; }
+.tdd-admin .tdd-slider--compact .tdd-slider__scale { grid-column: 1; grid-row: 2; }
+.tdd-admin .tdd-slider--compact .tdd-slider__help { grid-column: 1 / -1; margin: .25rem 0 0; font-size: .75rem; }
+.tdd-admin .tdd-remove { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
+.tdd-admin .tdd-remove input { margin: 0; }
 .tdd-admin .tdd-empty { margin: 0; padding: 1rem; color: var(--tdd-muted); background: var(--tdd-soft); border-radius: .4rem; }
 .tdd-admin .tdd-help { color: var(--tdd-muted); }
 .tdd-admin .tdd-scope-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
@@ -87,6 +90,7 @@
 @media (max-width: 60rem) {
     .tdd-admin .tdd-hero { align-items: start; flex-direction: column; gap: .5rem; }
     .tdd-admin .tdd-hero__chips { justify-content: flex-start; padding-top: 0; }
+    .tdd-admin .tdd-saved-row { grid-template-columns: minmax(10rem, .8fr) minmax(17rem, 2fr) auto; gap: .8rem; }
 }
 @media (max-width: 48rem) {
     .tdd-admin .tdd-hero { padding: 1.5rem; }
@@ -96,6 +100,8 @@
     .tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { align-items: stretch; flex-direction: column; }
     .tdd-admin .tdd-panel__actions { justify-content: stretch; }
     .tdd-admin .tdd-panel__actions .button { flex: 1 1 11rem; }
+    .tdd-admin .tdd-saved-row { grid-template-columns: minmax(0, 1fr) auto; }
+    .tdd-admin .tdd-saved-row__calibration { grid-column: 1 / -1; grid-row: 2; }
 }
 @media (max-width: 35rem) {
     .tdd-admin .tdd-hero__version { position: static; order: -1; align-self: flex-end; }

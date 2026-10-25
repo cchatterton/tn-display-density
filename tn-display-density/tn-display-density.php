@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.4.0
+ * Version: 0.4.1
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.4.0');
+define('TDD_VERSION', '0.4.1');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -90,7 +90,11 @@ function tdd_sanitize_settings($input) {
         if ($profile === null) {
             add_settings_error('tdd_settings', 'tdd_invalid_current', __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
         } else {
-            $settings['profiles'][tdd_profile_key($profile)] = $profile;
+            $key = tdd_profile_key($profile);
+            if ($profile['label'] === '' && !empty($settings['profiles'][$key]['label'])) {
+                $profile['label'] = $settings['profiles'][$key]['label'];
+            }
+            $settings['profiles'][$key] = $profile;
         }
     }
 
@@ -147,18 +151,19 @@ function tdd_register_settings() {
 }
 add_action('admin_init', 'tdd_register_settings');
 
-function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false) {
+function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false, $compact = false) {
     $slider_max = max(2, ceil((float) $value));
     ?>
-    <div class="tdd-slider" data-tdd-slider>
+    <div class="tdd-slider<?php echo $compact ? ' tdd-slider--compact' : ''; ?>" data-tdd-slider>
         <div class="tdd-slider__top">
-            <label class="tdd-slider__label" for="<?php echo esc_attr($id . '_range'); ?>">
+            <label class="tdd-slider__label<?php echo $compact ? ' screen-reader-text' : ''; ?>" for="<?php echo esc_attr($id . '_range'); ?>">
                 <?php echo esc_html($label); ?>
             </label>
             <div class="tdd-slider__exact">
                 <label for="<?php echo esc_attr($id); ?>"><?php esc_html_e('Value', 'tn-display-density'); ?></label>
                 <input type="number" id="<?php echo esc_attr($id); ?>" name="<?php echo esc_attr($name); ?>"
                     value="<?php echo esc_attr((string) $value); ?>" min="0" step="any" required
+                    <?php if ($compact) : ?>aria-label="<?php echo esc_attr(sprintf(__('Exact %s', 'tn-display-density'), $label)); ?>"<?php endif; ?>
                     data-tdd-value aria-describedby="<?php echo esc_attr($id . '_help'); ?>"
                     <?php disabled($disabled); ?>>
             </div>
@@ -171,7 +176,7 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false)
             <span>0</span><span data-tdd-range-max><?php echo esc_html((string) $slider_max); ?></span>
         </div>
         <p class="tdd-slider__help" id="<?php echo esc_attr($id . '_help'); ?>">
-            <?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?>
+            <?php if (!$compact) : ?><?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?><?php endif; ?>
             <?php echo esc_html($help); ?>
         </p>
     </div>
@@ -193,11 +198,6 @@ function tdd_render_current_display() {
         true
     );
     ?>
-    <div class="tdd-name-field">
-        <label for="tdd_current_label"><?php esc_html_e('Scenario name (optional)', 'tn-display-density'); ?></label>
-        <input type="text" id="tdd_current_label" name="tdd_settings[current][label]"
-            class="regular-text" placeholder="<?php echo esc_attr__('For example, Dell monitor or More Space', 'tn-display-density'); ?>" disabled>
-    </div>
     <input type="hidden" id="tdd_current_platform" name="tdd_settings[current][platform]">
     <input type="hidden" id="tdd_current_dpr" name="tdd_settings[current][dpr]">
     <input type="hidden" id="tdd_current_width" name="tdd_settings[current][width]">
@@ -227,14 +227,7 @@ function tdd_render_saved_displays() {
         return;
     }
     ?>
-    <div class="tdd-table-scroll">
-        <table class="widefat striped tdd-profiles">
-            <thead><tr>
-                <th scope="col"><?php esc_html_e('Observed scenario', 'tn-display-density'); ?></th>
-                <th scope="col"><?php esc_html_e('Calibration', 'tn-display-density'); ?></th>
-                <th scope="col"><?php esc_html_e('Remove', 'tn-display-density'); ?></th>
-            </tr></thead>
-            <tbody>
+    <ul class="tdd-saved-list">
             <?php foreach (array_values($profiles) as $index => $profile) :
                 $field = 'tdd_settings[profiles][' . $index . ']';
                 $description = sprintf(
@@ -246,16 +239,16 @@ function tdd_render_saved_displays() {
                 );
                 $title = !empty($profile['label']) ? $profile['label'] : $description;
                 ?>
-                <tr>
-                    <th scope="row">
-                        <strong><?php echo esc_html($title); ?></strong>
+                <li class="tdd-saved-row">
+                    <div class="tdd-saved-row__scenario">
+                        <strong class="tdd-saved-row__title"><?php echo esc_html($title); ?></strong>
                         <?php if ($title !== $description) : ?>
                             <span class="tdd-profile-detail"><?php echo esc_html($description); ?></span>
                         <?php endif; ?>
                         <input type="hidden" name="<?php echo esc_attr($field . '[label]'); ?>"
                             value="<?php echo esc_attr(isset($profile['label']) ? $profile['label'] : ''); ?>">
-                    </th>
-                    <td>
+                    </div>
+                    <div class="tdd-saved-row__calibration">
                         <?php
                         tdd_render_slider(
                             'tdd_profile_' . $index,
@@ -264,26 +257,24 @@ function tdd_render_saved_displays() {
                             sprintf(__('Calibration for %s', 'tn-display-density'), $title),
                             $profile['platform'] === 'mac'
                                 ? __('0 uses native zoom; a positive value sets the zoom factor.', 'tn-display-density')
-                                : __('0 uses native zoom; 1 applies full inverse-DPR compensation.', 'tn-display-density')
+                                : __('0 uses native zoom; 1 applies full inverse-DPR compensation.', 'tn-display-density'),
+                            false,
+                            true
                         );
                         foreach (array('platform', 'dpr', 'width', 'height') as $key) :
                             ?>
                             <input type="hidden" name="<?php echo esc_attr($field . '[' . $key . ']'); ?>"
                                 value="<?php echo esc_attr((string) $profile[$key]); ?>">
                         <?php endforeach; ?>
-                    </td>
-                    <td>
-                        <label class="tdd-remove">
-                            <input type="checkbox" name="<?php echo esc_attr($field . '[remove]'); ?>" value="1">
-                            <?php esc_html_e('Remove', 'tn-display-density'); ?>
-                        </label>
-                    </td>
-                </tr>
+                    </div>
+                    <label class="tdd-remove">
+                        <input type="checkbox" name="<?php echo esc_attr($field . '[remove]'); ?>" value="1"
+                            aria-label="<?php echo esc_attr(sprintf(__('Remove calibration for %s', 'tn-display-density'), $title)); ?>">
+                        <?php esc_html_e('Remove', 'tn-display-density'); ?>
+                    </label>
+                </li>
             <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-    <p class="tdd-help"><?php esc_html_e('Save changes to apply edits or removals.', 'tn-display-density'); ?></p>
+    </ul>
     <?php
 }
 
@@ -378,9 +369,7 @@ function tdd_render_settings_page() {
             </section>
             <section class="tdd-panel" aria-labelledby="tdd-saved-title">
                 <div class="tdd-panel__heading">
-                    <p class="tdd-panel__eyebrow"><?php esc_html_e('SAVED SCENARIOS', 'tn-display-density'); ?></p>
                     <h2 id="tdd-saved-title"><?php esc_html_e('Display calibrations', 'tn-display-density'); ?></h2>
-                    <p><?php esc_html_e('Edit or remove values saved for observed displays.', 'tn-display-density'); ?></p>
                 </div>
                 <?php tdd_render_saved_displays(); ?>
             </section>

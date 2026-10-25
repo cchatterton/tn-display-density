@@ -9,7 +9,7 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const elements = {};
     const opened = [];
     const appended = [];
-    for (const id of ['tdd_current_summary', 'tdd_current_value', 'tdd_current_label',
+    for (const id of ['tdd_current_summary', 'tdd_current_value',
         'tdd_save_current', 'tdd_preview_current', 'tdd_preview_status',
         'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height']) {
         elements[id] = {value: '', textContent: '', disabled: true, max: '', listeners: {},
@@ -130,7 +130,6 @@ assert.equal(browser('Unknown desktop', 2, 1440, 900, defaults).root.style.zoom,
 const admin = browser(mac, 2, 1440, 900, macSettings, true);
 assert.equal(admin.root.style.zoom, '');
 assert.equal(admin.elements.tdd_current_value.value, '0.9');
-assert.equal(admin.elements.tdd_current_label.value, 'More Space');
 assert.equal(admin.elements.tdd_current_value_range.value, '0.9');
 admin.elements.tdd_current_value_range.value = '1.1';
 admin.elements.tdd_current_value_range.listeners.input();
