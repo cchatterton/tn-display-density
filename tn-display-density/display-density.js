@@ -41,7 +41,7 @@
                 const macFactor = Number(settings.mac_compensation);
 
                 if (Number.isFinite(macFactor) && (macFactor === 0 ||
-                    (macFactor >= 0.65 && macFactor <= 1.25))) {
+                    (macFactor >= 0.65 && macFactor <= 1.25)) && dpr < 1.5) {
                     zoom = macFactor === 0 ? 1 : macFactor;
                 }
             }

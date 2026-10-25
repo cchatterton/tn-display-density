@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 2026-10-25
+
+- Apply the optional Mac factor only when device pixel ratio drops below Retina range.
+
 ## 0.1.1 - 2026-10-25
 
 - Clarify the plugin's display-scaling purpose in its metadata and settings screen.

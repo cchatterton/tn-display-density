@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.1.1
+ * Version: 0.1.2
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.1.1');
+define('TDD_VERSION', '0.1.2');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -115,7 +115,7 @@ function tdd_render_mac_field() {
         value="<?php echo esc_attr((string) $settings['mac_compensation']); ?>"
         min="0" max="1.25" step="0.01" required aria-describedby="tdd_mac_help">
     <p class="description" id="tdd_mac_help">
-        <?php esc_html_e('Default 0 leaves macOS at native zoom. Otherwise enter the zoom factor directly, from 0.65 to 1.25 (for example, 0.85 for 85%).', 'tn-display-density'); ?>
+        <?php esc_html_e('Default 0 leaves macOS at native zoom. Set a factor from 0.65 to 1.25 for standard-density displays (for example, 0.85 for 85%). Retina-range displays stay native.', 'tn-display-density'); ?>
     </p>
     <?php
 }
