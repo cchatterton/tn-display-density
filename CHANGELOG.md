@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.6 - 2026-10-25
+
+- Encode decimal preview values without a dot in the query string, avoiding a homepage 404 on affected sites while preserving exact calibration values.
+
 ## 0.5.5 - 2026-10-25
 
 - Place slider and calibration guidance once above the four platform defaults instead of repeating it under each control.

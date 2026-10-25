@@ -13,7 +13,7 @@
     const previewParameter = !window.TDDAdmin && window.TDDPreviewAllowed && window.location
         ? new URLSearchParams(window.location.search).get('tn_display_density_preview') : null;
     const previewValue = previewParameter !== null && previewParameter !== ''
-        ? Number(previewParameter) : null;
+        ? Number(previewParameter.replace('_', '.')) : null;
 
     function environment() {
         const dpr = window.devicePixelRatio;
@@ -168,7 +168,7 @@
                 return;
             }
             const url = new URL(area === 'admin' ? window.TDDAdminPreviewUrl : window.TDDPreviewUrl, window.location.href);
-            url.searchParams.set('tn_display_density_preview', String(calibration));
+            url.searchParams.set('tn_display_density_preview', String(calibration).replace('.', '_'));
             previewStatus.textContent = 'Opening a temporary ' + (area === 'admin' ? 'admin' : 'frontend') + ' preview. This value is not saved.';
             window.open(url.toString(), '_blank', 'noopener');
         }
