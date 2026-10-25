@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.5.3
+ * Version: 0.5.4
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.5.3');
+define('TDD_VERSION', '0.5.4');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -244,8 +244,7 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
 function tdd_render_scope_toggles($name, $id, $apply_frontend, $apply_admin, $disabled = false) {
     $selected = $apply_admin ? 'admin' : 'frontend';
     ?>
-    <fieldset class="tdd-apply">
-        <legend><?php esc_html_e('Apply to', 'tn-display-density'); ?></legend>
+    <fieldset class="tdd-apply" aria-label="<?php echo esc_attr__('Calibration area', 'tn-display-density'); ?>">
         <div class="tdd-apply__choices">
             <?php foreach (array('frontend' => __('Frontend', 'tn-display-density'), 'admin' => __('WordPress admin', 'tn-display-density')) as $area => $label) : ?>
                 <label>

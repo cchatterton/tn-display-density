@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.4 - 2026-10-25
+
+- Remove the visible Apply to label above calibration area selectors while retaining an accessible group name.
+
 ## 0.5.3 - 2026-10-25
 
 - Make every saved display calibration apply to exactly one area, frontend or WordPress admin.

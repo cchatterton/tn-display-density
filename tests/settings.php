@@ -115,6 +115,7 @@ check(strpos($current_field, 'id="tdd_preview_frontend"') !== false && strpos($c
 check(strpos($current_field, 'tdd_current_label') === false, 'Current display has no optional scenario name');
 check(strpos($current_field, 'id="tdd_current_frontend"') !== false && strpos($current_field, 'id="tdd_current_admin"') !== false && strpos($current_field, 'id="tdd_current_both"') === false, 'Current display has a two-way scope control');
 check(strpos($current_field, 'name="tdd_settings[current][apply_to]"') !== false && strpos($current_field, 'type="checkbox"') === false, 'Current scope uses radios, not checkboxes');
+check(strpos($current_field, '>Apply to<') === false && strpos($current_field, 'aria-label="Calibration area"') !== false, 'Area selector has no visible label and keeps an accessible name');
 
 $stronger = tdd_sanitize_settings(settings_input(array('windows_frontend_compensation' => '1.1',
     'save_current' => '1', 'current' => array('platform' => 'windows', 'dpr' => '1.25',

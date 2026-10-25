@@ -55,8 +55,7 @@
 .tdd-admin .tdd-slider input[type="range"]:disabled { cursor: not-allowed; }
 .tdd-admin .tdd-slider__scale { display: flex; justify-content: space-between; color: var(--tdd-muted); font-size: .75rem; }
 .tdd-admin .tdd-slider__help { margin: .7rem 0 0; color: var(--tdd-muted); line-height: 1.45; }
-.tdd-admin .tdd-apply { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; min-width: 0; margin: .85rem 0 0; padding: 0; border: 0; }
-.tdd-admin .tdd-apply legend { width: 100%; margin-bottom: .2rem; padding: 0; color: var(--tdd-muted); font-size: .82rem; font-weight: 600; }
+.tdd-admin .tdd-apply { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; min-width: 0; margin: .45rem 0 0; padding: 0; border: 0; }
 .tdd-admin .tdd-apply__choices { display: inline-flex; flex-wrap: wrap; gap: .2rem; padding: .2rem; border: .0625rem solid var(--tdd-border); border-radius: .5rem; background: var(--tdd-soft); }
 .tdd-admin .tdd-apply label { position: relative; display: inline-flex; cursor: pointer; }
 .tdd-admin .tdd-apply input[type="radio"] { position: absolute; width: .0625rem; height: .0625rem; opacity: 0; }

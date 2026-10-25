@@ -3,7 +3,7 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.5.3
+Stable tag: 0.5.4
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -28,6 +28,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Appearance > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.5.4 =
+* Remove the visible Apply to label above calibration area selectors.
 
 = 0.5.3 =
 * Store frontend and WordPress admin calibrations separately for each display, with a dedicated area column. Convert older Both entries into two calibrations.
