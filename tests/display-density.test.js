@@ -10,11 +10,14 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const opened = [];
     const appended = [];
     for (const id of ['tdd_current_summary', 'tdd_current_value',
-        'tdd_save_current', 'tdd_preview_current', 'tdd_preview_status',
+        'tdd_save_current', 'tdd_preview_frontend', 'tdd_preview_admin', 'tdd_preview_status',
         'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height',
-        'tdd_current_frontend', 'tdd_current_admin']) {
-        elements[id] = {value: '', textContent: '', disabled: true, checked: false, max: '', listeners: {},
+        'tdd_current_frontend', 'tdd_current_admin', 'tdd_current_both']) {
+        elements[id] = {value: '', textContent: '', disabled: true, hidden: false, checked: false, max: '', listeners: {},
             addEventListener(name, callback) {this.listeners[name] = callback;}};
+    }
+    for (const area of ['frontend', 'admin', 'both']) {
+        elements['tdd_current_' + area].value = area;
     }
     const sliders = [];
     if (admin) {
@@ -48,7 +51,8 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
         TDDIsAdmin: admin || !!options.isAdmin,
         TDDPreviewAllowed: options.previewAllowed || false,
         TDDPreviewUrl: 'https://example.test/',
-        location: {href: 'https://example.test/' + (options.query || ''), search: options.query || ''},
+        TDDAdminPreviewUrl: 'https://example.test/wp-admin/index.php',
+        location: {href: 'https://example.test/' + (options.isAdmin ? 'wp-admin/' : '') + (options.query || ''), search: options.query || ''},
         open: (url, target, features) => opened.push({url, target, features}),
         devicePixelRatio: dpr,
         screen: {width, height},
@@ -133,8 +137,9 @@ assert.equal(browser('Unknown desktop', 2, 1440, 900, defaults).root.style.zoom,
 
 const admin = browser(mac, 2, 1440, 900, macSettings, true);
 assert.equal(admin.root.style.zoom, '0.9');
-assert.equal(admin.elements.tdd_current_frontend.checked, true);
-assert.equal(admin.elements.tdd_current_admin.checked, true);
+assert.equal(admin.elements.tdd_current_both.checked, true);
+assert.equal(admin.elements.tdd_preview_frontend.hidden, false);
+assert.equal(admin.elements.tdd_preview_admin.hidden, false);
 assert.equal(admin.elements.tdd_current_value.value, '0.9');
 assert.equal(admin.elements.tdd_current_value_range.value, '0.9');
 admin.elements.tdd_current_value_range.value = '1.1';
@@ -145,19 +150,27 @@ admin.elements.tdd_current_value.listeners.input();
 assert.equal(admin.elements.tdd_current_value_range.max, '3');
 assert.equal(admin.elements.tdd_current_value_range.value, '2.5');
 admin.elements.tdd_current_value.value = '0.8';
-admin.elements.tdd_preview_current.listeners.click();
+admin.elements.tdd_preview_frontend.listeners.click();
 assert.equal(admin.opened[0].url, 'https://example.test/?tn_display_density_preview=0.8');
 assert.equal(admin.opened[0].features, 'noopener');
 assert.match(admin.elements.tdd_preview_status.textContent, /not saved/);
+admin.elements.tdd_current_both.checked = false;
+admin.elements.tdd_current_admin.checked = true;
+admin.elements.tdd_current_admin.listeners.change();
+assert.equal(admin.elements.tdd_preview_frontend.hidden, true);
+assert.equal(admin.elements.tdd_preview_admin.hidden, false);
+admin.elements.tdd_preview_admin.listeners.click();
+assert.equal(admin.opened[1].url, 'https://example.test/wp-admin/index.php?tn_display_density_preview=0.8');
 assert.equal(admin.elements.tdd_save_current.disabled, false);
-assert.equal(admin.elements.tdd_preview_current.disabled, false);
+assert.equal(admin.elements.tdd_preview_admin.disabled, false);
 admin.window.screen.width = 1920;
 admin.window.screen.height = 1080;
 admin.window.devicePixelRatio = 1;
 admin.listeners.focus();
 assert.equal(admin.elements.tdd_current_value.value, '0.85');
 assert.equal(admin.elements.tdd_current_dpr.value, '1.00');
-assert.equal(admin.elements.tdd_current_admin.checked, false);
+assert.equal(admin.elements.tdd_current_frontend.checked, true);
+assert.equal(admin.elements.tdd_preview_admin.hidden, true);
 
 const preview = browser(mac, 2, 1440, 900, macSettings, false,
     {previewAllowed: true, query: '?tn_display_density_preview=0.7'});
@@ -166,6 +179,10 @@ assert.equal(preview.appended.length, 1);
 assert.equal(preview.appended[0].child.href, 'https://example.test/');
 assert.equal(browser(mac, 2, 1440, 900, macSettings, false,
     {query: '?tn_display_density_preview=0.7'}).root.style.zoom, '0.9');
+const adminPreview = browser(mac, 2, 1440, 900, macSettings, false,
+    {isAdmin: true, previewAllowed: true, query: '?tn_display_density_preview=0.7'});
+assert.equal(adminPreview.root.style.zoom, '0.7');
+assert.equal(adminPreview.appended[0].child.href, 'https://example.test/wp-admin/');
 
 const adminOnly = browser(windows, 1.25, 1920, 1080, {
     ...defaults, windows_admin_compensation: 0.4,

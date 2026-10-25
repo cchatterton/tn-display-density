@@ -24,6 +24,7 @@ function current_user_can($capability) { return true; }
 function plugins_url($path, $file) { return '/plugins/' . $path; }
 function wp_json_encode($value) { return json_encode($value); }
 function home_url($path) { return 'https://example.test' . $path; }
+function admin_url($path) { return 'https://example.test/wp-admin/' . $path; }
 function wp_enqueue_script($handle) { $GLOBALS['tdd_enqueued'][] = $handle; }
 function wp_enqueue_style($handle) { $GLOBALS['tdd_enqueued'][] = $handle; }
 function wp_add_inline_script() {}
@@ -90,13 +91,14 @@ check(strpos($windows_field, 'step="any"') !== false, 'Windows input accepts pre
 ob_start();
 tdd_render_current_display();
 $current_field = ob_get_clean();
-check(strpos($current_field, 'id="tdd_preview_current"') !== false, 'Current display has a preview control');
+check(strpos($current_field, 'id="tdd_preview_frontend"') !== false && strpos($current_field, 'id="tdd_preview_admin"') !== false, 'Current display has separate preview controls');
 check(strpos($current_field, 'tdd_current_label') === false, 'Current display has no optional scenario name');
-check(strpos($current_field, 'id="tdd_current_frontend"') !== false && strpos($current_field, 'id="tdd_current_admin"') !== false, 'Current display has separate scope toggles');
+check(strpos($current_field, 'id="tdd_current_frontend"') !== false && strpos($current_field, 'id="tdd_current_admin"') !== false && strpos($current_field, 'id="tdd_current_both"') !== false, 'Current display has one three-way scope control');
+check(strpos($current_field, 'name="tdd_settings[current][apply_to]"') !== false && strpos($current_field, 'type="checkbox"') === false, 'Current scope uses radios, not checkboxes');
 
 $stronger = tdd_sanitize_settings(settings_input(array('windows_frontend_compensation' => '1.1',
     'save_current' => '1', 'current' => array('platform' => 'windows', 'dpr' => '1.25',
-        'width' => '1920', 'height' => '1080', 'value' => '1.1', 'apply_frontend' => '1', 'apply_admin' => '0'))));
+        'width' => '1920', 'height' => '1080', 'value' => '1.1', 'apply_to' => 'frontend'))));
 check($stronger['windows_frontend_compensation'] === 1.1, 'Windows frontend default accepts 1.1');
 check($stronger['profiles']['windows|1.25|1920x1080']['value'] === 1.1, 'Windows scenario accepts 1.1');
 
@@ -106,7 +108,7 @@ check($unbounded['mac_admin_compensation'] === 0.5, 'Mac admin accepts positive 
 $both = tdd_sanitize_settings(settings_input(array('mac_admin_compensation' => '0.85')));
 
 $current = array('platform' => 'mac', 'dpr' => '1', 'width' => '1920', 'height' => '1080',
-    'value' => '0.85', 'label' => 'Dell <b>monitor</b>', 'apply_frontend' => '0', 'apply_admin' => '1');
+    'value' => '0.85', 'label' => 'Dell <b>monitor</b>', 'apply_to' => 'admin');
 $saved = tdd_sanitize_settings(settings_input(array('save_current' => '1', 'current' => $current)));
 check(isset($saved['profiles']['mac|1.00|1920x1080']), 'Current scenario saved');
 check($saved['profiles']['mac|1.00|1920x1080']['label'] === 'Dell monitor', 'Scenario label sanitized');
@@ -122,7 +124,15 @@ check(strpos($saved_markup, '<table') === false, 'Saved display does not use the
 check(strpos($saved_markup, 'Slider steps:') === false, 'Saved row omits repeated slider instructions');
 check(strpos($saved_markup, 'tdd-slider__help') === false, 'Saved row omits calibration helper text');
 check(strpos($saved_markup, 'aria-describedby="tdd_profile_0_help"') === false, 'Saved slider has no missing help reference');
-check(strpos($saved_markup, 'id="tdd_profile_0_frontend"') !== false && strpos($saved_markup, 'id="tdd_profile_0_admin"') !== false, 'Saved display has separate scope toggles');
+check(strpos($saved_markup, 'id="tdd_profile_0_frontend"') !== false && strpos($saved_markup, 'id="tdd_profile_0_admin"') !== false && strpos($saved_markup, 'id="tdd_profile_0_both"') !== false, 'Saved display has a three-way scope control');
+check(strpos($saved_markup, 'name="tdd_settings[profiles][0][apply_to]"') !== false, 'Saved display sends one scope value');
+$both_areas = tdd_sanitize_profile(array_merge($current, array('apply_to' => 'both')));
+check($both_areas['apply_frontend'] && $both_areas['apply_admin'], 'Both scope applies calibration in both areas');
+$changed_area = tdd_sanitize_settings(settings_input(array('profiles' => array(array_merge(
+    $saved['profiles']['mac|1.00|1920x1080'], array('apply_to' => 'frontend')
+)))));
+check($changed_area['profiles']['mac|1.00|1920x1080']['apply_frontend'] &&
+    !$changed_area['profiles']['mac|1.00|1920x1080']['apply_admin'], 'Saved control changes an admin-only calibration to frontend-only');
 $resaved = tdd_sanitize_settings(settings_input(array(
     'profiles' => array_values($saved['profiles']), 'save_current' => '1',
     'current' => array_diff_key($current, array('label' => true)))));
@@ -137,12 +147,17 @@ check($invalid['windows_frontend_compensation'] === 0.85, 'Invalid Windows value
 check((float) $invalid['mac_admin_compensation'] === 0.0, 'Invalid Mac value preserved');
 check(count($GLOBALS['tdd_errors']) >= 2, 'Validation errors reported');
 
-$no_scope = tdd_sanitize_settings(settings_input(array('save_current' => '1', 'current' => array_merge($current, array('apply_admin' => '0')))));
+$no_scope = tdd_sanitize_settings(settings_input(array('save_current' => '1', 'current' => array_merge($current, array('apply_to' => '')))));
 check($no_scope['profiles'] === array(), 'A calibration requires frontend or admin');
 
 $GLOBALS['saved_tdd_settings'] = array();
 tdd_enqueue_admin_script('dashboard');
 check($GLOBALS['tdd_enqueued'] === array(), 'Default does not enqueue on other admin screens');
+$_GET['tn_display_density_preview'] = '0.8';
+tdd_enqueue_admin_script('dashboard');
+check(in_array('tdd-display-density', $GLOBALS['tdd_enqueued'], true), 'Temporary admin preview enqueues even when admin defaults are native');
+unset($_GET['tn_display_density_preview']);
+$GLOBALS['tdd_enqueued'] = array();
 tdd_enqueue_admin_script('appearance_page_tn-display-density');
 check(in_array('tdd-display-density-admin', $GLOBALS['tdd_enqueued'], true), 'Settings page styling enqueued');
 $GLOBALS['tdd_enqueued'] = array();

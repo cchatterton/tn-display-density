@@ -130,18 +130,27 @@
         const value = document.getElementById('tdd_current_value');
         const currentRange = document.getElementById('tdd_current_value_range');
         const button = document.getElementById('tdd_save_current');
-        const previewButton = document.getElementById('tdd_preview_current');
+        const previewFrontend = document.getElementById('tdd_preview_frontend');
+        const previewAdmin = document.getElementById('tdd_preview_admin');
         const previewStatus = document.getElementById('tdd_preview_status');
-        const currentFrontend = document.getElementById('tdd_current_frontend');
-        const currentAdmin = document.getElementById('tdd_current_admin');
+        const currentScopes = ['frontend', 'admin', 'both'].map(function (area) {
+            return document.getElementById('tdd_current_' + area);
+        });
         let currentKey = null;
 
-        if (!summary || !value || !currentRange || !button || !previewButton || !previewStatus ||
-            !currentFrontend || !currentAdmin) {
+        if (!summary || !value || !currentRange || !button || !previewFrontend || !previewAdmin ||
+            !previewStatus || currentScopes.some(function (scope) { return !scope; })) {
             return function () {};
         }
 
-        previewButton.addEventListener('click', function () {
+        function updatePreviewButtons() {
+            const selected = currentScopes.find(function (scope) { return scope.checked; });
+            const area = selected ? selected.value : 'frontend';
+            previewFrontend.hidden = area === 'admin';
+            previewAdmin.hidden = area === 'frontend';
+        }
+
+        function preview(area) {
             const display = environment();
             const calibration = Number(value.value);
             if (!display || value.value === '' || !validCalibration(calibration) ||
@@ -149,10 +158,16 @@
                 previewStatus.textContent = 'Enter a value that produces a positive zoom to preview it.';
                 return;
             }
-            const url = new URL(window.TDDPreviewUrl, window.location.href);
+            const url = new URL(area === 'admin' ? window.TDDAdminPreviewUrl : window.TDDPreviewUrl, window.location.href);
             url.searchParams.set('tn_display_density_preview', String(calibration));
-            previewStatus.textContent = 'Opening a temporary site preview. This value is not saved.';
+            previewStatus.textContent = 'Opening a temporary ' + (area === 'admin' ? 'admin' : 'frontend') + ' preview. This value is not saved.';
             window.open(url.toString(), '_blank', 'noopener');
+        }
+
+        previewFrontend.addEventListener('click', function () { preview('frontend'); });
+        previewAdmin.addEventListener('click', function () { preview('admin'); });
+        currentScopes.forEach(function (scope) {
+            scope.addEventListener('change', updatePreviewButtons);
         });
 
         return function updateAdminDisplay() {
@@ -163,9 +178,9 @@
                 value.disabled = true;
                 currentRange.disabled = true;
                 button.disabled = true;
-                previewButton.disabled = true;
-                currentFrontend.disabled = true;
-                currentAdmin.disabled = true;
+                previewFrontend.disabled = true;
+                previewAdmin.disabled = true;
+                currentScopes.forEach(function (scope) { scope.disabled = true; });
                 currentKey = null;
                 return;
             }
@@ -181,8 +196,11 @@
             if (key !== currentKey) {
                 const calibration = profile ? Number(profile.value) : fallbackCalibration(display, false);
                 value.value = validCalibration(calibration) ? String(calibration) : '0';
-                currentFrontend.checked = profile ? (profile.apply_frontend === undefined || !!profile.apply_frontend) : true;
-                currentAdmin.checked = profile ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin) : false;
+                const appliesFrontend = profile ? (profile.apply_frontend === undefined || !!profile.apply_frontend) : true;
+                const appliesAdmin = profile ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin) : false;
+                const selectedArea = appliesFrontend && appliesAdmin ? 'both' : (appliesAdmin ? 'admin' : 'frontend');
+                currentScopes.forEach(function (scope) { scope.checked = scope.value === selectedArea; });
+                updatePreviewButtons();
                 const currentSlider = value.closest('[data-tdd-slider]');
                 if (currentSlider && currentSlider.syncFromValue) {
                     currentSlider.syncFromValue();
@@ -197,9 +215,9 @@
             value.disabled = false;
             currentRange.disabled = false;
             button.disabled = false;
-            previewButton.disabled = false;
-            currentFrontend.disabled = false;
-            currentAdmin.disabled = false;
+            previewFrontend.disabled = false;
+            previewAdmin.disabled = false;
+            currentScopes.forEach(function (scope) { scope.disabled = false; });
         };
     }
 

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.5.0
+ * Version: 0.5.1
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.5.0');
+define('TDD_VERSION', '0.5.1');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -87,7 +87,9 @@ function tdd_sanitize_settings($input) {
 
         $profile = tdd_sanitize_profile($raw_profile);
         if ($profile === null) {
-            $missing_area = is_array($raw_profile) && empty($raw_profile['apply_frontend']) && empty($raw_profile['apply_admin']);
+            $missing_area = is_array($raw_profile) && (array_key_exists('apply_to', $raw_profile)
+                ? !is_scalar($raw_profile['apply_to']) || !in_array((string) $raw_profile['apply_to'], array('frontend', 'admin', 'both'), true)
+                : (empty($raw_profile['apply_frontend']) && empty($raw_profile['apply_admin'])));
             add_settings_error('tdd_settings', 'tdd_invalid_profile', $missing_area
                 ? __('Choose Frontend, WordPress admin, or both for each saved calibration.', 'tn-display-density')
                 : __('An invalid display calibration was kept at its previous value.', 'tn-display-density'));
@@ -102,7 +104,9 @@ function tdd_sanitize_settings($input) {
         $current = isset($input['current']) ? $input['current'] : null;
         $profile = tdd_sanitize_profile($current);
         if ($profile === null) {
-            $missing_area = is_array($current) && empty($current['apply_frontend']) && empty($current['apply_admin']);
+            $missing_area = is_array($current) && (array_key_exists('apply_to', $current)
+                ? !is_scalar($current['apply_to']) || !in_array((string) $current['apply_to'], array('frontend', 'admin', 'both'), true)
+                : (empty($current['apply_frontend']) && empty($current['apply_admin'])));
             add_settings_error('tdd_settings', 'tdd_invalid_current', $missing_area
                 ? __('Choose Frontend, WordPress admin, or both before saving this calibration.', 'tn-display-density')
                 : __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
@@ -143,8 +147,17 @@ function tdd_sanitize_profile($raw) {
         return null;
     }
 
-    $apply_frontend = !empty($raw['apply_frontend']);
-    $apply_admin = !empty($raw['apply_admin']);
+    if (array_key_exists('apply_to', $raw)) {
+        $apply_to = is_scalar($raw['apply_to']) ? (string) $raw['apply_to'] : '';
+        if (!in_array($apply_to, array('frontend', 'admin', 'both'), true)) {
+            return null;
+        }
+        $apply_frontend = $apply_to !== 'admin';
+        $apply_admin = $apply_to !== 'frontend';
+    } else {
+        $apply_frontend = !empty($raw['apply_frontend']);
+        $apply_admin = !empty($raw['apply_admin']);
+    }
     if (!$apply_frontend && !$apply_admin) {
         return null;
     }
@@ -213,23 +226,20 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
 }
 
 function tdd_render_scope_toggles($name, $id, $apply_frontend, $apply_admin, $disabled = false) {
+    $selected = $apply_frontend && $apply_admin ? 'both' : ($apply_admin ? 'admin' : 'frontend');
     ?>
     <fieldset class="tdd-apply">
         <legend><?php esc_html_e('Apply to', 'tn-display-density'); ?></legend>
-        <label>
-            <input type="hidden" name="<?php echo esc_attr($name . '[apply_frontend]'); ?>" value="0">
-            <input type="checkbox" id="<?php echo esc_attr($id . '_frontend'); ?>"
-                name="<?php echo esc_attr($name . '[apply_frontend]'); ?>" value="1"
-                <?php checked((bool) $apply_frontend, true); ?> <?php disabled($disabled); ?>>
-            <?php esc_html_e('Frontend', 'tn-display-density'); ?>
-        </label>
-        <label>
-            <input type="hidden" name="<?php echo esc_attr($name . '[apply_admin]'); ?>" value="0">
-            <input type="checkbox" id="<?php echo esc_attr($id . '_admin'); ?>"
-                name="<?php echo esc_attr($name . '[apply_admin]'); ?>" value="1"
-                <?php checked((bool) $apply_admin, true); ?> <?php disabled($disabled); ?>>
-            <?php esc_html_e('WordPress admin', 'tn-display-density'); ?>
-        </label>
+        <div class="tdd-apply__choices">
+            <?php foreach (array('frontend' => __('Frontend', 'tn-display-density'), 'admin' => __('WordPress admin', 'tn-display-density'), 'both' => __('Both', 'tn-display-density')) as $area => $label) : ?>
+                <label>
+                    <input type="radio" id="<?php echo esc_attr($id . '_' . $area); ?>"
+                        name="<?php echo esc_attr($name . '[apply_to]'); ?>" value="<?php echo esc_attr($area); ?>"
+                        <?php checked($selected, $area); ?> <?php disabled($disabled); ?>>
+                    <span><?php echo esc_html($label); ?></span>
+                </label>
+            <?php endforeach; ?>
+        </div>
     </fieldset>
     <?php
 }
@@ -257,8 +267,11 @@ function tdd_render_current_display() {
     <div class="tdd-panel__footer">
         <p><?php esc_html_e('Switch a display mode or move this window, then save a value for the observed scenario.', 'tn-display-density'); ?></p>
         <div class="tdd-panel__actions">
-            <button type="button" class="button tdd-secondary" id="tdd_preview_current" disabled>
-                <?php esc_html_e('Preview on site', 'tn-display-density'); ?>
+            <button type="button" class="button tdd-secondary" id="tdd_preview_frontend" disabled>
+                <?php esc_html_e('Preview frontend', 'tn-display-density'); ?>
+            </button>
+            <button type="button" class="button tdd-secondary" id="tdd_preview_admin" hidden disabled>
+                <?php esc_html_e('Preview admin', 'tn-display-density'); ?>
             </button>
             <button type="submit" class="button tdd-secondary" id="tdd_save_current"
                 name="tdd_settings[save_current]" value="1" disabled>
@@ -452,7 +465,8 @@ function tdd_enqueue_admin_script($hook) {
     $is_settings_page = $hook === 'appearance_page_tn-display-density';
     $settings = tdd_get_settings();
     if (!$is_settings_page) {
-        $has_admin_calibration = (float) $settings['windows_admin_compensation'] > 0 ||
+        $has_admin_calibration = (current_user_can('manage_options') && isset($_GET['tn_display_density_preview'])) ||
+            (float) $settings['windows_admin_compensation'] > 0 ||
             (float) $settings['mac_admin_compensation'] > 0;
         foreach ($settings['profiles'] as $profile) {
             if (!empty($profile['apply_admin'])) {
@@ -482,7 +496,7 @@ function tdd_enqueue_admin_script($hook) {
     );
     wp_add_inline_script(
         'tdd-display-density',
-        'window.TDDSettings = ' . wp_json_encode($settings) . '; window.TDDAdmin = ' . ($is_settings_page ? 'true' : 'false') . '; window.TDDIsAdmin = true; window.TDDPreviewUrl = ' . wp_json_encode(home_url('/')) . ';',
+        'window.TDDSettings = ' . wp_json_encode($settings) . '; window.TDDAdmin = ' . ($is_settings_page ? 'true' : 'false') . '; window.TDDIsAdmin = true; window.TDDPreviewAllowed = ' . (current_user_can('manage_options') ? 'true' : 'false') . '; window.TDDPreviewUrl = ' . wp_json_encode(home_url('/')) . '; window.TDDAdminPreviewUrl = ' . wp_json_encode(admin_url('index.php')) . ';',
         'before'
     );
 }

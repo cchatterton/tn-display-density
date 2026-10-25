@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 - 2026-10-25
+
+- Replace each pair of application checkboxes with one Frontend, WordPress admin, or Both control.
+- Preview the current calibration in the selected area, with separate previews when Both is selected.
+
 ## 0.5.0 - 2026-10-25
 
 - Add separate frontend and WordPress admin defaults for Windows and Mac.

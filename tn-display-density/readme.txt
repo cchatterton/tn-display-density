@@ -3,7 +3,7 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.5.0
+Stable tag: 0.5.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -16,7 +16,7 @@ TN Display Density uses browser zoom to compensate for desktop display scaling o
 
 Administrators can save separate calibrations for the browser-observed Windows or Mac environment, device pixel ratio and display dimensions. Each calibration can apply to the frontend, WordPress admin, or both. Switch a macOS display scaling choice or move to another monitor, then open Appearance > Display Density and save the current scenario. The same process works for Windows display scaling choices. The browser cannot read the exact operating-system display setting name.
 
-Sliders move in 0.1 steps. Exact values can still be entered in the paired number fields. Administrators can preview an unsaved current-display value on the site homepage in a new tab, then exit the preview without saving. Windows and Mac each have separate frontend and WordPress admin defaults. Existing frontend settings are preserved; older installations that enabled the global admin option retain those values in both areas.
+Sliders move in 0.1 steps. Exact values can still be entered in the paired number fields. Each display calibration offers a Frontend, WordPress admin, or Both choice. Administrators can preview an unsaved current-display value in the selected area in a new tab, then exit without saving. Both offers separate frontend and admin preview buttons. Windows and Mac each have separate frontend and WordPress admin defaults. Existing frontend settings are preserved; older installations that enabled the global admin option retain those values in both areas.
 
 Browser data cannot reliably identify operating-system display scaling on every monitor. These settings provide a practical approximation.
 
@@ -26,6 +26,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Appearance > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.5.1 =
+* Use one three-way application control per display calibration and scope current-display previews to frontend or admin.
 
 = 0.5.0 =
 * Add separate Windows and Mac frontend/admin defaults and per-display application toggles, preserving existing settings.
