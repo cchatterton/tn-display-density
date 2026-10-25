@@ -3,7 +3,7 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.2.0
+Stable tag: 0.2.1
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -24,6 +24,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Settings > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.2.1 =
+* Remove arbitrary calibration limits while rejecting invalid values and non-positive calculated zoom.
 
 = 0.2.0 =
 * Add per-display scenario calibration controls for Windows and macOS.

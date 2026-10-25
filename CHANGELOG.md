@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1 - 2026-10-25
+
+- Remove arbitrary calibration limits while rejecting invalid values and non-positive calculated zoom.
+
 ## 0.2.0 - 2026-10-25
 
 - Add per-display scenario calibration controls for Windows and macOS.

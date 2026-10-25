@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.2.0
+ * Version: 0.2.1
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.2.0');
+define('TDD_VERSION', '0.2.1');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -36,20 +36,11 @@ function tdd_get_settings() {
 function tdd_sanitize_settings($input) {
     $previous = tdd_get_settings();
     $settings = array();
-    $limits = array(
-        'windows_compensation' => array(0, 1),
-        'mac_compensation'     => array(0, 1.25),
-    );
-
-    foreach ($limits as $key => $range) {
+    foreach (array('windows_compensation', 'mac_compensation') as $key) {
         $raw = is_array($input) && isset($input[$key]) ? $input[$key] : null;
         $valid = is_scalar($raw) && is_numeric($raw);
         $value = $valid ? (float) $raw : 0;
-        $valid = $valid && is_finite($value) && $value >= $range[0] && $value <= $range[1];
-
-        if ($key === 'mac_compensation' && $value !== 0.0 && $value < 0.65) {
-            $valid = false;
-        }
+        $valid = $valid && is_finite($value) && $value >= 0;
 
         if (!$valid) {
             $settings[$key] = $previous[$key];
@@ -57,8 +48,8 @@ function tdd_sanitize_settings($input) {
                 'tdd_settings',
                 'tdd_invalid_' . $key,
                 $key === 'windows_compensation'
-                    ? __('Windows compensation must be between 0 and 1.', 'tn-display-density')
-                    : __('Mac compensation must be 0 for native zoom or between 0.65 and 1.25.', 'tn-display-density')
+                    ? __('Windows compensation must be a finite, non-negative number.', 'tn-display-density')
+                    : __('Mac compensation must be 0 for native zoom or a positive, finite zoom factor.', 'tn-display-density')
             );
             continue;
         }
@@ -121,10 +112,7 @@ function tdd_sanitize_profile($raw) {
         return null;
     }
 
-    if ($platform === 'windows' && ($value < 0 || $value > 1)) {
-        return null;
-    }
-    if ($platform === 'mac' && $value !== 0.0 && ($value < 0.65 || $value > 1.25)) {
+    if ($value < 0) {
         return null;
     }
 
@@ -187,9 +175,9 @@ function tdd_render_windows_field() {
     ?>
     <input type="number" id="tdd_windows_compensation" name="tdd_settings[windows_compensation]"
         value="<?php echo esc_attr((string) $settings['windows_compensation']); ?>"
-        min="0" max="1" step="0.01" required aria-describedby="tdd_windows_help">
+        min="0" step="any" required aria-describedby="tdd_windows_help">
     <p class="description" id="tdd_windows_help">
-        <?php esc_html_e('Default 0.85. Use 0 to leave Windows at native zoom; 1 applies full inverse-DPR compensation.', 'tn-display-density'); ?>
+        <?php esc_html_e('Default 0.85. Use 0 for native zoom, 1 for full inverse-DPR compensation, or a higher value for a stronger adjustment.', 'tn-display-density'); ?>
     </p>
     <?php
 }
@@ -199,9 +187,9 @@ function tdd_render_mac_field() {
     ?>
     <input type="number" id="tdd_mac_compensation" name="tdd_settings[mac_compensation]"
         value="<?php echo esc_attr((string) $settings['mac_compensation']); ?>"
-        min="0" max="1.25" step="0.01" required aria-describedby="tdd_mac_help">
+        min="0" step="any" required aria-describedby="tdd_mac_help">
     <p class="description" id="tdd_mac_help">
-        <?php esc_html_e('Default 0 leaves macOS at native zoom. Set a factor from 0.65 to 1.25 for standard-density displays (for example, 0.85 for 85%). Retina-range displays stay native.', 'tn-display-density'); ?>
+        <?php esc_html_e('Default 0 leaves macOS at native zoom. Set a positive factor for standard-density displays (for example, 0.85 for 85%). Retina-range displays stay native.', 'tn-display-density'); ?>
     </p>
     <?php
 }
@@ -213,7 +201,7 @@ function tdd_render_current_display() {
     </p>
     <label for="tdd_current_value"><?php esc_html_e('Calibration for this display', 'tn-display-density'); ?></label>
     <input type="number" id="tdd_current_value" name="tdd_settings[current][value]"
-        min="0" max="1.25" step="0.01" disabled aria-describedby="tdd_current_help">
+        min="0" step="any" disabled aria-describedby="tdd_current_help">
     <p>
         <label for="tdd_current_label"><?php esc_html_e('Scenario name (optional)', 'tn-display-density'); ?></label>
         <input type="text" id="tdd_current_label" name="tdd_settings[current][label]"
@@ -224,7 +212,7 @@ function tdd_render_current_display() {
     <input type="hidden" id="tdd_current_width" name="tdd_settings[current][width]">
     <input type="hidden" id="tdd_current_height" name="tdd_settings[current][height]">
     <p class="description" id="tdd_current_help">
-        <?php esc_html_e('Switch the operating-system display mode or move this window to another monitor, then save a calibration for the observed scenario. Windows uses 0–1 inverse-DPR strength; Mac uses 0 for native or 0.65–1.25 as a direct zoom factor.', 'tn-display-density'); ?>
+        <?php esc_html_e('Switch the operating-system display mode or move this window to another monitor, then save a calibration for the observed scenario. Windows uses non-negative inverse-DPR strength; Mac uses 0 for native or a positive direct zoom factor.', 'tn-display-density'); ?>
     </p>
     <button type="submit" class="button button-secondary" id="tdd_save_current"
         name="tdd_settings[save_current]" value="1" disabled>
@@ -275,7 +263,7 @@ function tdd_render_saved_displays() {
                     <input type="number" id="tdd_profile_<?php echo esc_attr((string) $index); ?>"
                         name="<?php echo esc_attr($field . '[value]'); ?>"
                         value="<?php echo esc_attr((string) $profile['value']); ?>"
-                        min="0" max="<?php echo $profile['platform'] === 'mac' ? '1.25' : '1'; ?>" step="0.01">
+                        min="0" step="any">
                     <?php foreach (array('platform', 'dpr', 'width', 'height') as $key) : ?>
                         <input type="hidden" name="<?php echo esc_attr($field . '[' . $key . ']'); ?>"
                             value="<?php echo esc_attr((string) $profile[$key]); ?>">

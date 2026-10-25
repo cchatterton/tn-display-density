@@ -44,7 +44,7 @@ const win = browser(windows, 1.25, 1920, 1080, defaults);
 assert.ok(Math.abs(Number(win.root.style.zoom) - 0.83) < 1e-10);
 win.window.devicePixelRatio = 2;
 win.listeners.resolution();
-assert.equal(win.root.style.zoom, '0.65');
+assert.equal(win.root.style.zoom, '0.575');
 
 const winProfile = browser(windows, 1.25, 1920, 1080, {
     ...defaults,
@@ -52,8 +52,33 @@ const winProfile = browser(windows, 1.25, 1920, 1080, {
 });
 assert.equal(winProfile.root.style.zoom, '1');
 
+const strongerWindows = browser(windows, 1.25, 1920, 1080, {
+    ...defaults,
+    windows_compensation: 1.1,
+    profiles: {}
+});
+assert.ok(Math.abs(Number(strongerWindows.root.style.zoom) - 0.78) < 1e-10);
+
+const strongerProfile = browser(windows, 1.25, 1920, 1080, {
+    ...defaults,
+    profiles: {'windows|1.25|1920x1080': {value: 1.1}}
+}, true);
+assert.equal(strongerProfile.elements.tdd_current_value.value, '1.1');
+assert.equal(strongerProfile.elements.tdd_current_value.max, '');
+
+const unboundedWindows = browser(windows, 1.25, 1920, 1080, {
+    ...defaults, windows_compensation: 2.1, profiles: {}
+});
+assert.ok(Math.abs(Number(unboundedWindows.root.style.zoom) - 0.58) < 1e-10);
+assert.equal(browser(windows, 2, 1920, 1080, {
+    ...defaults, windows_compensation: 3, profiles: {}
+}).root.style.zoom, '1');
+
 const retina = browser(mac, 2, 1440, 900, defaults);
 assert.equal(retina.root.style.zoom, '1');
+assert.equal(browser(mac, 1, 1920, 1080, {
+    ...defaults, mac_compensation: 0.5
+}).root.style.zoom, '0.5');
 
 const macSettings = {
     ...defaults,

@@ -43,10 +43,8 @@
         return settings.profiles && settings.profiles[profileKey(display)];
     }
 
-    function validCalibration(value, operatingSystem) {
-        return Number.isFinite(value) && (operatingSystem === 'windows'
-            ? value >= 0 && value <= 1
-            : value === 0 || (value >= 0.65 && value <= 1.25));
+    function validCalibration(value) {
+        return Number.isFinite(value) && value >= 0;
     }
 
     function fallbackCalibration(display) {
@@ -54,10 +52,6 @@
             return Number(settings.windows_compensation);
         }
         return display.dpr < 1.5 ? Number(settings.mac_compensation) : 0;
-    }
-
-    function clamp(value, min, max) {
-        return Math.min(max, Math.max(min, value));
     }
 
     function applyDisplayDensity() {
@@ -68,15 +62,19 @@
             const profile = matchingProfile(display);
             const calibration = profile ? Number(profile.value) : fallbackCalibration(display);
 
-            if (validCalibration(calibration, display.platform)) {
+            if (validCalibration(calibration)) {
                 if (display.platform === 'windows') {
                     const relativeScale = display.rawDpr / 1;
                     const compensation = 1 / relativeScale;
-                    zoom = clamp(1 + (compensation - 1) * calibration, 0.65, 1.25);
+                    zoom = 1 + (compensation - 1) * calibration;
                 } else {
                     zoom = calibration === 0 ? 1 : calibration;
                 }
             }
+        }
+
+        if (!Number.isFinite(zoom) || zoom <= 0) {
+            zoom = 1;
         }
 
         if (document.documentElement.style.zoom !== String(zoom)) {
@@ -117,8 +115,7 @@
 
             if (key !== currentKey) {
                 const calibration = profile ? Number(profile.value) : fallbackCalibration(display);
-                value.value = validCalibration(calibration, display.platform) ? String(calibration) : '0';
-                value.max = display.platform === 'mac' ? '1.25' : '1';
+                value.value = validCalibration(calibration) ? String(calibration) : '0';
                 label.value = profile && profile.label ? profile.label : '';
                 document.getElementById('tdd_current_platform').value = display.platform;
                 document.getElementById('tdd_current_dpr').value = display.dpr.toFixed(2);
