@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.5.2
+ * Version: 0.5.3
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.5.2');
+define('TDD_VERSION', '0.5.3');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -29,15 +29,23 @@ function tdd_get_settings() {
     $legacy_admin = isset($saved['scope']) && $saved['scope'] === 'all';
     $windows = isset($saved['windows_compensation']) ? $saved['windows_compensation'] : 0.85;
     $mac = isset($saved['mac_compensation']) ? $saved['mac_compensation'] : 0;
-    $profiles = isset($saved['profiles']) && is_array($saved['profiles']) ? $saved['profiles'] : array();
-    foreach ($profiles as $key => $profile) {
+    $stored_profiles = isset($saved['profiles']) && is_array($saved['profiles']) ? $saved['profiles'] : array();
+    $profiles = array();
+    foreach ($stored_profiles as $profile) {
         if (!is_array($profile)) {
-            unset($profiles[$key]);
             continue;
         }
-        $profile['apply_frontend'] = isset($profile['apply_frontend']) ? (bool) $profile['apply_frontend'] : true;
-        $profile['apply_admin'] = isset($profile['apply_admin']) ? (bool) $profile['apply_admin'] : $legacy_admin;
-        $profiles[$key] = $profile;
+        // Older entries could cover both areas. Split them without changing either value.
+        $frontend = isset($profile['apply_frontend']) ? (bool) $profile['apply_frontend'] : true;
+        $admin = isset($profile['apply_admin']) ? (bool) $profile['apply_admin'] : $legacy_admin;
+        foreach (array('frontend' => $frontend, 'admin' => $admin) as $area => $applies) {
+            if ($applies) {
+                $separate = $profile;
+                $separate['apply_frontend'] = $area === 'frontend';
+                $separate['apply_admin'] = $area === 'admin';
+                $profiles[tdd_profile_key($separate)] = $separate;
+            }
+        }
     }
 
     return array(
@@ -88,15 +96,22 @@ function tdd_sanitize_settings($input) {
         $profile = tdd_sanitize_profile($raw_profile);
         if ($profile === null) {
             $missing_area = is_array($raw_profile) && (array_key_exists('apply_to', $raw_profile)
-                ? !is_scalar($raw_profile['apply_to']) || !in_array((string) $raw_profile['apply_to'], array('frontend', 'admin', 'both'), true)
+                ? !is_scalar($raw_profile['apply_to']) || !in_array((string) $raw_profile['apply_to'], array('frontend', 'admin'), true)
                 : (empty($raw_profile['apply_frontend']) && empty($raw_profile['apply_admin'])));
             add_settings_error('tdd_settings', 'tdd_invalid_profile', $missing_area
-                ? __('Choose Frontend, WordPress admin, or both for each saved calibration.', 'tn-display-density')
+                ? __('Choose Frontend or WordPress admin for each saved calibration.', 'tn-display-density')
                 : __('An invalid display calibration was kept at its previous value.', 'tn-display-density'));
             $profile = isset($previous_profiles[$index]) ? $previous_profiles[$index] : null;
         }
         if ($profile !== null) {
-            $settings['profiles'][tdd_profile_key($profile)] = $profile;
+            $key = tdd_profile_key($profile);
+            if (isset($settings['profiles'][$key])) {
+                add_settings_error('tdd_settings', 'tdd_duplicate_profile',
+                    __('A frontend and admin calibration for the same display must remain separate. The saved calibrations were kept unchanged.', 'tn-display-density'));
+                $settings['profiles'] = $previous['profiles'];
+                break;
+            }
+            $settings['profiles'][$key] = $profile;
         }
     }
 
@@ -105,10 +120,10 @@ function tdd_sanitize_settings($input) {
         $profile = tdd_sanitize_profile($current);
         if ($profile === null) {
             $missing_area = is_array($current) && (array_key_exists('apply_to', $current)
-                ? !is_scalar($current['apply_to']) || !in_array((string) $current['apply_to'], array('frontend', 'admin', 'both'), true)
+                ? !is_scalar($current['apply_to']) || !in_array((string) $current['apply_to'], array('frontend', 'admin'), true)
                 : (empty($current['apply_frontend']) && empty($current['apply_admin'])));
             add_settings_error('tdd_settings', 'tdd_invalid_current', $missing_area
-                ? __('Choose Frontend, WordPress admin, or both before saving this calibration.', 'tn-display-density')
+                ? __('Choose Frontend or WordPress admin before saving this calibration.', 'tn-display-density')
                 : __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
         } else {
             $key = tdd_profile_key($profile);
@@ -123,7 +138,8 @@ function tdd_sanitize_settings($input) {
 }
 
 function tdd_profile_key($profile) {
-    return $profile['platform'] . '|' . number_format($profile['dpr'], 2, '.', '') . '|' . $profile['width'] . 'x' . $profile['height'];
+    return $profile['platform'] . '|' . number_format($profile['dpr'], 2, '.', '') . '|' . $profile['width'] . 'x' . $profile['height'] .
+        '|' . (!empty($profile['apply_admin']) ? 'admin' : 'frontend');
 }
 
 function tdd_sanitize_profile($raw) {
@@ -149,16 +165,16 @@ function tdd_sanitize_profile($raw) {
 
     if (array_key_exists('apply_to', $raw)) {
         $apply_to = is_scalar($raw['apply_to']) ? (string) $raw['apply_to'] : '';
-        if (!in_array($apply_to, array('frontend', 'admin', 'both'), true)) {
+        if (!in_array($apply_to, array('frontend', 'admin'), true)) {
             return null;
         }
-        $apply_frontend = $apply_to !== 'admin';
-        $apply_admin = $apply_to !== 'frontend';
+        $apply_frontend = $apply_to === 'frontend';
+        $apply_admin = $apply_to === 'admin';
     } else {
         $apply_frontend = !empty($raw['apply_frontend']);
         $apply_admin = !empty($raw['apply_admin']);
     }
-    if (!$apply_frontend && !$apply_admin) {
+    if ($apply_frontend === $apply_admin) {
         return null;
     }
 
@@ -226,12 +242,12 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
 }
 
 function tdd_render_scope_toggles($name, $id, $apply_frontend, $apply_admin, $disabled = false) {
-    $selected = $apply_frontend && $apply_admin ? 'both' : ($apply_admin ? 'admin' : 'frontend');
+    $selected = $apply_admin ? 'admin' : 'frontend';
     ?>
     <fieldset class="tdd-apply">
         <legend><?php esc_html_e('Apply to', 'tn-display-density'); ?></legend>
         <div class="tdd-apply__choices">
-            <?php foreach (array('frontend' => __('Frontend', 'tn-display-density'), 'admin' => __('WordPress admin', 'tn-display-density'), 'both' => __('Both', 'tn-display-density')) as $area => $label) : ?>
+            <?php foreach (array('frontend' => __('Frontend', 'tn-display-density'), 'admin' => __('WordPress admin', 'tn-display-density')) as $area => $label) : ?>
                 <label>
                     <input type="radio" id="<?php echo esc_attr($id . '_' . $area); ?>"
                         name="<?php echo esc_attr($name . '[apply_to]'); ?>" value="<?php echo esc_attr($area); ?>"
@@ -324,12 +340,14 @@ function tdd_render_saved_displays() {
                             false,
                             true
                         );
-                        tdd_render_scope_toggles($field, 'tdd_profile_' . $index, $profile['apply_frontend'], $profile['apply_admin']);
                         foreach (array('platform', 'dpr', 'width', 'height') as $key) :
                             ?>
                             <input type="hidden" name="<?php echo esc_attr($field . '[' . $key . ']'); ?>"
                                 value="<?php echo esc_attr((string) $profile[$key]); ?>">
                         <?php endforeach; ?>
+                    </div>
+                    <div class="tdd-saved-row__area">
+                        <?php tdd_render_scope_toggles($field, 'tdd_profile_' . $index, $profile['apply_frontend'], $profile['apply_admin']); ?>
                     </div>
                     <label class="tdd-remove">
                         <input type="checkbox" name="<?php echo esc_attr($field . '[remove]'); ?>" value="1"

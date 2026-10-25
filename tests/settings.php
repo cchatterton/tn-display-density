@@ -76,10 +76,18 @@ $GLOBALS['saved_tdd_settings'] = array(
 $legacy = tdd_get_settings();
 check($legacy['windows_frontend_compensation'] === 1.1 && $legacy['windows_admin_compensation'] === 1.1, 'Old all-scope Windows value migrates to both defaults');
 check($legacy['mac_frontend_compensation'] === 0.5 && $legacy['mac_admin_compensation'] === 0.5, 'Old all-scope Mac value migrates to both defaults');
-check($legacy['profiles']['mac|1.00|1920x1080']['apply_frontend'] && $legacy['profiles']['mac|1.00|1920x1080']['apply_admin'], 'Old all-scope profile migrates to both areas');
+check(count($legacy['profiles']) === 2 && $legacy['profiles']['mac|1.00|1920x1080|frontend']['apply_frontend'] &&
+    $legacy['profiles']['mac|1.00|1920x1080|admin']['apply_admin'], 'Old all-scope profile splits into two calibrations');
 $GLOBALS['saved_tdd_settings']['scope'] = 'frontend';
 $legacy = tdd_get_settings();
-check($legacy['windows_admin_compensation'] === 0 && !$legacy['profiles']['mac|1.00|1920x1080']['apply_admin'], 'Old frontend-only setting keeps admin native');
+check($legacy['windows_admin_compensation'] === 0 && !isset($legacy['profiles']['mac|1.00|1920x1080|admin']), 'Old frontend-only setting keeps admin native');
+$GLOBALS['saved_tdd_settings']['profiles']['mac|1.00|1920x1080']['apply_frontend'] = true;
+$GLOBALS['saved_tdd_settings']['profiles']['mac|1.00|1920x1080']['apply_admin'] = true;
+$split = tdd_get_settings();
+check(count($split['profiles']) === 2 &&
+    $split['profiles']['mac|1.00|1920x1080|frontend']['value'] === 0.8 &&
+    $split['profiles']['mac|1.00|1920x1080|admin']['value'] === 0.8,
+    'Version 0.5.2 Both calibration becomes two independent entries');
 $GLOBALS['saved_tdd_settings'] = array();
 
 function settings_input($changes = array()) {
@@ -105,14 +113,14 @@ tdd_render_current_display();
 $current_field = ob_get_clean();
 check(strpos($current_field, 'id="tdd_preview_frontend"') !== false && strpos($current_field, 'id="tdd_preview_admin"') !== false, 'Current display has separate preview controls');
 check(strpos($current_field, 'tdd_current_label') === false, 'Current display has no optional scenario name');
-check(strpos($current_field, 'id="tdd_current_frontend"') !== false && strpos($current_field, 'id="tdd_current_admin"') !== false && strpos($current_field, 'id="tdd_current_both"') !== false, 'Current display has one three-way scope control');
+check(strpos($current_field, 'id="tdd_current_frontend"') !== false && strpos($current_field, 'id="tdd_current_admin"') !== false && strpos($current_field, 'id="tdd_current_both"') === false, 'Current display has a two-way scope control');
 check(strpos($current_field, 'name="tdd_settings[current][apply_to]"') !== false && strpos($current_field, 'type="checkbox"') === false, 'Current scope uses radios, not checkboxes');
 
 $stronger = tdd_sanitize_settings(settings_input(array('windows_frontend_compensation' => '1.1',
     'save_current' => '1', 'current' => array('platform' => 'windows', 'dpr' => '1.25',
         'width' => '1920', 'height' => '1080', 'value' => '1.1', 'apply_to' => 'frontend'))));
 check($stronger['windows_frontend_compensation'] === 1.1, 'Windows frontend default accepts 1.1');
-check($stronger['profiles']['windows|1.25|1920x1080']['value'] === 1.1, 'Windows scenario accepts 1.1');
+check($stronger['profiles']['windows|1.25|1920x1080|frontend']['value'] === 1.1, 'Windows scenario accepts 1.1');
 
 $unbounded = tdd_sanitize_settings(settings_input(array('windows_frontend_compensation' => '2.1', 'mac_admin_compensation' => '0.5')));
 check($unbounded['windows_frontend_compensation'] === 2.1, 'Windows accepts larger finite values');
@@ -122,9 +130,9 @@ $both = tdd_sanitize_settings(settings_input(array('mac_admin_compensation' => '
 $current = array('platform' => 'mac', 'dpr' => '1', 'width' => '1920', 'height' => '1080',
     'value' => '0.85', 'label' => 'Dell <b>monitor</b>', 'apply_to' => 'admin');
 $saved = tdd_sanitize_settings(settings_input(array('save_current' => '1', 'current' => $current)));
-check(isset($saved['profiles']['mac|1.00|1920x1080']), 'Current scenario saved');
-check($saved['profiles']['mac|1.00|1920x1080']['label'] === 'Dell monitor', 'Scenario label sanitized');
-check(!$saved['profiles']['mac|1.00|1920x1080']['apply_frontend'] && $saved['profiles']['mac|1.00|1920x1080']['apply_admin'], 'Admin-only scenario saved');
+check(isset($saved['profiles']['mac|1.00|1920x1080|admin']), 'Current scenario saved');
+check($saved['profiles']['mac|1.00|1920x1080|admin']['label'] === 'Dell monitor', 'Scenario label sanitized');
+check(!$saved['profiles']['mac|1.00|1920x1080|admin']['apply_frontend'] && $saved['profiles']['mac|1.00|1920x1080|admin']['apply_admin'], 'Admin-only scenario saved');
 
 $GLOBALS['saved_tdd_settings'] = $saved;
 ob_start();
@@ -136,21 +144,38 @@ check(strpos($saved_markup, '<table') === false, 'Saved display does not use the
 check(strpos($saved_markup, 'Slider steps:') === false, 'Saved row omits repeated slider instructions');
 check(strpos($saved_markup, 'tdd-slider__help') === false, 'Saved row omits calibration helper text');
 check(strpos($saved_markup, 'aria-describedby="tdd_profile_0_help"') === false, 'Saved slider has no missing help reference');
-check(strpos($saved_markup, 'id="tdd_profile_0_frontend"') !== false && strpos($saved_markup, 'id="tdd_profile_0_admin"') !== false && strpos($saved_markup, 'id="tdd_profile_0_both"') !== false, 'Saved display has a three-way scope control');
+check(strpos($saved_markup, 'id="tdd_profile_0_frontend"') !== false && strpos($saved_markup, 'id="tdd_profile_0_admin"') !== false && strpos($saved_markup, 'id="tdd_profile_0_both"') === false, 'Saved display has a two-way scope control');
 check(strpos($saved_markup, 'name="tdd_settings[profiles][0][apply_to]"') !== false, 'Saved display sends one scope value');
-$both_areas = tdd_sanitize_profile(array_merge($current, array('apply_to' => 'both')));
-check($both_areas['apply_frontend'] && $both_areas['apply_admin'], 'Both scope applies calibration in both areas');
+check(strpos($saved_markup, 'class="tdd-saved-row__area"') !== false, 'Saved area has its own column');
+check(tdd_sanitize_profile(array_merge($current, array('apply_to' => 'both'))) === null, 'Both is not a valid scope');
 $changed_area = tdd_sanitize_settings(settings_input(array('profiles' => array(array_merge(
-    $saved['profiles']['mac|1.00|1920x1080'], array('apply_to' => 'frontend')
+    $saved['profiles']['mac|1.00|1920x1080|admin'], array('apply_to' => 'frontend')
 )))));
-check($changed_area['profiles']['mac|1.00|1920x1080']['apply_frontend'] &&
-    !$changed_area['profiles']['mac|1.00|1920x1080']['apply_admin'], 'Saved control changes an admin-only calibration to frontend-only');
+check($changed_area['profiles']['mac|1.00|1920x1080|frontend']['apply_frontend'] &&
+    !$changed_area['profiles']['mac|1.00|1920x1080|frontend']['apply_admin'], 'Saved control changes an admin-only calibration to frontend-only');
+$second = tdd_sanitize_settings(settings_input(array(
+    'profiles' => array_values($saved['profiles']), 'save_current' => '1',
+    'current' => array_merge($current, array('value' => '0.65', 'apply_to' => 'frontend')))));
+check(count($second['profiles']) === 2 &&
+    $second['profiles']['mac|1.00|1920x1080|frontend']['value'] === 0.65 &&
+    $second['profiles']['mac|1.00|1920x1080|admin']['value'] === 0.85,
+    'Saving frontend keeps its own value and the separate admin calibration');
+$GLOBALS['saved_tdd_settings'] = $second;
+$collision = tdd_sanitize_settings(settings_input(array('profiles' => array(
+    $second['profiles']['mac|1.00|1920x1080|frontend'],
+    array_merge($second['profiles']['mac|1.00|1920x1080|admin'], array('apply_to' => 'frontend')),
+))));
+check(count($collision['profiles']) === 2 &&
+    $collision['profiles']['mac|1.00|1920x1080|frontend']['value'] === 0.65 &&
+    $collision['profiles']['mac|1.00|1920x1080|admin']['value'] === 0.85,
+    'Switching to an occupied area does not overwrite either calibration');
+$GLOBALS['saved_tdd_settings'] = $saved;
 $resaved = tdd_sanitize_settings(settings_input(array(
     'profiles' => array_values($saved['profiles']), 'save_current' => '1',
     'current' => array_diff_key($current, array('label' => true)))));
-check($resaved['profiles']['mac|1.00|1920x1080']['label'] === 'Dell monitor', 'Existing scenario label survives save without name field');
+check($resaved['profiles']['mac|1.00|1920x1080|admin']['label'] === 'Dell monitor', 'Existing scenario label survives save without name field');
 $removed = tdd_sanitize_settings(settings_input(array(
-    'profiles' => array(array_merge($saved['profiles']['mac|1.00|1920x1080'], array('remove' => '1'))))));
+    'profiles' => array(array_merge($saved['profiles']['mac|1.00|1920x1080|admin'], array('remove' => '1'))))));
 check($removed['profiles'] === array(), 'Scenario removal');
 
 $invalid = tdd_sanitize_settings(settings_input(array('windows_frontend_compensation' => 'bad', 'mac_admin_compensation' => '-0.4',

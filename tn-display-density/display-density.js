@@ -39,22 +39,13 @@
         };
     }
 
-    function profileKey(display) {
+    function profileKey(display, area = isAdmin ? 'admin' : 'frontend') {
         return display.platform + '|' + display.dpr.toFixed(2) + '|' +
-            display.width + 'x' + display.height;
+            display.width + 'x' + display.height + '|' + area;
     }
 
-    function matchingProfile(display) {
-        return settings.profiles && settings.profiles[profileKey(display)];
-    }
-
-    function profileApplies(profile) {
-        if (!profile) {
-            return false;
-        }
-        return isAdmin
-            ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin)
-            : (profile.apply_frontend === undefined || !!profile.apply_frontend);
+    function matchingProfile(display, area = isAdmin ? 'admin' : 'frontend') {
+        return settings.profiles && settings.profiles[profileKey(display, area)];
     }
 
     function validCalibration(value) {
@@ -91,7 +82,7 @@
         if (display) {
             const profile = matchingProfile(display);
             const calibration = validCalibration(previewValue) && previewParameter !== null
-                ? previewValue : profileApplies(profile) ? Number(profile.value) : fallbackCalibration(display);
+                ? previewValue : profile ? Number(profile.value) : fallbackCalibration(display);
             zoom = zoomFor(display, calibration);
         }
 
@@ -137,10 +128,12 @@
         const previewFrontend = document.getElementById('tdd_preview_frontend');
         const previewAdmin = document.getElementById('tdd_preview_admin');
         const previewStatus = document.getElementById('tdd_preview_status');
-        const currentScopes = ['frontend', 'admin', 'both'].map(function (area) {
+        const currentScopes = ['frontend', 'admin'].map(function (area) {
             return document.getElementById('tdd_current_' + area);
         });
         let currentKey = null;
+        let currentArea = null;
+        let areaValues = {};
 
         if (!summary || !value || !currentRange || !button || !previewFrontend || !previewAdmin ||
             !previewStatus || currentScopes.some(function (scope) { return !scope; })) {
@@ -152,6 +145,18 @@
             const area = selected ? selected.value : 'frontend';
             previewFrontend.hidden = area === 'admin';
             previewAdmin.hidden = area === 'frontend';
+        }
+
+        function loadArea(display, area) {
+            const profile = matchingProfile(display, area);
+            const calibration = profile ? Number(profile.value) : fallbackCalibration(display, area === 'admin');
+            value.value = Object.prototype.hasOwnProperty.call(areaValues, area)
+                ? areaValues[area] : validCalibration(calibration) ? String(calibration) : '0';
+            const slider = value.closest('[data-tdd-slider]');
+            if (slider && slider.syncFromValue) {
+                slider.syncFromValue();
+            }
+            currentArea = area;
         }
 
         function preview(area) {
@@ -171,7 +176,16 @@
         previewFrontend.addEventListener('click', function () { preview('frontend'); });
         previewAdmin.addEventListener('click', function () { preview('admin'); });
         currentScopes.forEach(function (scope) {
-            scope.addEventListener('change', updatePreviewButtons);
+            scope.addEventListener('change', function () {
+                updatePreviewButtons();
+                const display = environment();
+                if (scope.checked && display && currentArea !== scope.value) {
+                    if (currentArea) {
+                        areaValues[currentArea] = value.value;
+                    }
+                    loadArea(display, scope.value);
+                }
+            });
         });
 
         return function updateAdminDisplay() {
@@ -186,11 +200,15 @@
                 previewAdmin.disabled = true;
                 currentScopes.forEach(function (scope) { scope.disabled = true; });
                 currentKey = null;
+                currentArea = null;
+                areaValues = {};
                 return;
             }
 
-            const key = profileKey(display);
-            const profile = matchingProfile(display);
+            const key = profileKey(display, 'frontend');
+            const selected = currentScopes.find(function (scope) { return scope.checked; });
+            const area = key === currentKey && selected ? selected.value : 'frontend';
+            const profile = matchingProfile(display, area);
             const name = display.platform === 'mac' ? 'Mac' : 'Windows';
             summary.textContent = name + ' · DPR ' + display.dpr.toFixed(2) +
                 ' · display ' + display.width + ' × ' + display.height +
@@ -198,17 +216,10 @@
                 (profile ? ' · saved calibration' : ' · using default');
 
             if (key !== currentKey) {
-                const calibration = profile ? Number(profile.value) : fallbackCalibration(display, false);
-                value.value = validCalibration(calibration) ? String(calibration) : '0';
-                const appliesFrontend = profile ? (profile.apply_frontend === undefined || !!profile.apply_frontend) : true;
-                const appliesAdmin = profile ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin) : false;
-                const selectedArea = appliesFrontend && appliesAdmin ? 'both' : (appliesAdmin ? 'admin' : 'frontend');
-                currentScopes.forEach(function (scope) { scope.checked = scope.value === selectedArea; });
+                areaValues = {};
+                currentScopes.forEach(function (scope) { scope.checked = scope.value === 'frontend'; });
                 updatePreviewButtons();
-                const currentSlider = value.closest('[data-tdd-slider]');
-                if (currentSlider && currentSlider.syncFromValue) {
-                    currentSlider.syncFromValue();
-                }
+                loadArea(display, 'frontend');
                 document.getElementById('tdd_current_platform').value = display.platform;
                 document.getElementById('tdd_current_dpr').value = display.dpr.toFixed(2);
                 document.getElementById('tdd_current_width').value = String(display.width);

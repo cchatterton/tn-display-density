@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 - 2026-10-25
+
+- Make every saved display calibration apply to exactly one area, frontend or WordPress admin.
+- Keep two separate values for the same display and split older Both entries into two calibrations.
+- Put the area control in its own saved calibration column.
+
 ## 0.5.2 - 2026-10-25
 
 - Show the current effective scaling as a small DDS item in the WordPress admin bar.
