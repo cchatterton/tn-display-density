@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.3.0
+ * Version: 0.4.0
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.3.0');
+define('TDD_VERSION', '0.4.0');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -29,6 +29,7 @@ function tdd_get_settings() {
     return wp_parse_args(is_array($saved) ? $saved : array(), array(
         'windows_compensation' => 0.85,
         'mac_compensation'     => 0,
+        'scope'                => 'frontend',
         'profiles'             => array(),
     ));
 }
@@ -56,6 +57,11 @@ function tdd_sanitize_settings($input) {
 
         $settings[$key] = $value;
     }
+
+    $scope = is_array($input) && isset($input['scope']) && is_scalar($input['scope'])
+        ? (string) $input['scope'] : '';
+    $settings['scope'] = in_array($scope, array('frontend', 'all'), true)
+        ? $scope : $previous['scope'];
 
     $settings['profiles'] = array();
     $submitted = is_array($input) && isset($input['profiles']) && is_array($input['profiles'])
@@ -134,6 +140,7 @@ function tdd_register_settings() {
         'default'           => array(
             'windows_compensation' => 0.85,
             'mac_compensation'     => 0,
+            'scope'                => 'frontend',
             'profiles'             => array(),
         ),
     ));
@@ -157,13 +164,14 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false)
             </div>
         </div>
         <input type="range" id="<?php echo esc_attr($id . '_range'); ?>"
-            min="0" max="<?php echo esc_attr((string) $slider_max); ?>" step="0.01"
+            min="0" max="<?php echo esc_attr((string) $slider_max); ?>" step="0.1"
             value="<?php echo esc_attr((string) $value); ?>" data-tdd-range
             aria-describedby="<?php echo esc_attr($id . '_help'); ?>" <?php disabled($disabled); ?>>
         <div class="tdd-slider__scale" aria-hidden="true">
             <span>0</span><span data-tdd-range-max><?php echo esc_html((string) $slider_max); ?></span>
         </div>
         <p class="tdd-slider__help" id="<?php echo esc_attr($id . '_help'); ?>">
+            <?php esc_html_e('Slider steps: 0.1. Enter an exact value if needed.', 'tn-display-density'); ?>
             <?php echo esc_html($help); ?>
         </p>
     </div>
@@ -181,7 +189,7 @@ function tdd_render_current_display() {
         'tdd_settings[current][value]',
         0,
         __('Calibration for this display', 'tn-display-density'),
-        __('Drag the slider or enter an exact value. Windows uses inverse-DPR strength; Mac uses 0 for native or a positive zoom factor.', 'tn-display-density'),
+        __('Windows uses inverse-DPR strength; Mac uses 0 for native or a positive zoom factor.', 'tn-display-density'),
         true
     );
     ?>
@@ -196,11 +204,17 @@ function tdd_render_current_display() {
     <input type="hidden" id="tdd_current_height" name="tdd_settings[current][height]">
     <div class="tdd-panel__footer">
         <p><?php esc_html_e('Switch a display mode or move this window, then save a value for the observed scenario.', 'tn-display-density'); ?></p>
-        <button type="submit" class="button tdd-secondary" id="tdd_save_current"
-            name="tdd_settings[save_current]" value="1" disabled>
-            <?php esc_html_e('Save this display calibration', 'tn-display-density'); ?>
-        </button>
+        <div class="tdd-panel__actions">
+            <button type="button" class="button tdd-secondary" id="tdd_preview_current" disabled>
+                <?php esc_html_e('Preview on site', 'tn-display-density'); ?>
+            </button>
+            <button type="submit" class="button tdd-secondary" id="tdd_save_current"
+                name="tdd_settings[save_current]" value="1" disabled>
+                <?php esc_html_e('Save this display calibration', 'tn-display-density'); ?>
+            </button>
+        </div>
     </div>
+    <p class="tdd-preview-status" id="tdd_preview_status" role="status" aria-live="polite"></p>
     <?php
 }
 
@@ -343,6 +357,25 @@ function tdd_render_settings_page() {
                     ?>
                 </div>
             </section>
+            <section class="tdd-panel" aria-labelledby="tdd-scope-title">
+                <div class="tdd-panel__heading">
+                    <p class="tdd-panel__eyebrow"><?php esc_html_e('APPLICATION', 'tn-display-density'); ?></p>
+                    <h2 id="tdd-scope-title"><?php esc_html_e('Where scaling applies', 'tn-display-density'); ?></h2>
+                    <p><?php esc_html_e('Choose whether calibrated zoom also applies to WordPress admin screens.', 'tn-display-density'); ?></p>
+                </div>
+                <div class="tdd-scope-options">
+                    <label class="tdd-scope-option">
+                        <input type="radio" name="tdd_settings[scope]" value="frontend" <?php checked($settings['scope'], 'frontend'); ?>>
+                        <span><strong><?php esc_html_e('Frontend only', 'tn-display-density'); ?></strong>
+                        <small><?php esc_html_e('Scale public pages. Keep WordPress admin at its native size.', 'tn-display-density'); ?></small></span>
+                    </label>
+                    <label class="tdd-scope-option">
+                        <input type="radio" name="tdd_settings[scope]" value="all" <?php checked($settings['scope'], 'all'); ?>>
+                        <span><strong><?php esc_html_e('Frontend and WordPress admin', 'tn-display-density'); ?></strong>
+                        <small><?php esc_html_e('Apply the same saved calibration to public pages and admin screens.', 'tn-display-density'); ?></small></span>
+                    </label>
+                </div>
+            </section>
             <section class="tdd-panel" aria-labelledby="tdd-saved-title">
                 <div class="tdd-panel__heading">
                     <p class="tdd-panel__eyebrow"><?php esc_html_e('SAVED SCENARIOS', 'tn-display-density'); ?></p>
@@ -374,23 +407,26 @@ function tdd_enqueue_script() {
     $settings = tdd_get_settings();
     wp_add_inline_script(
         'tdd-display-density',
-        'window.TDDSettings = ' . wp_json_encode($settings) . ';',
+        'window.TDDSettings = ' . wp_json_encode($settings) . '; window.TDDPreviewAllowed = ' . (current_user_can('manage_options') ? 'true' : 'false') . ';',
         'before'
     );
 }
 add_action('wp_enqueue_scripts', 'tdd_enqueue_script');
 
 function tdd_enqueue_admin_script($hook) {
-    if ($hook !== 'appearance_page_tn-display-density') {
+    $is_settings_page = $hook === 'appearance_page_tn-display-density';
+    if (!$is_settings_page && tdd_get_settings()['scope'] !== 'all') {
         return;
     }
 
-    wp_enqueue_style(
-        'tdd-display-density-admin',
-        plugins_url('display-density.css', __FILE__),
-        array(),
-        TDD_VERSION
-    );
+    if ($is_settings_page) {
+        wp_enqueue_style(
+            'tdd-display-density-admin',
+            plugins_url('display-density.css', __FILE__),
+            array(),
+            TDD_VERSION
+        );
+    }
     wp_enqueue_script(
         'tdd-display-density',
         plugins_url('display-density.js', __FILE__),
@@ -400,7 +436,7 @@ function tdd_enqueue_admin_script($hook) {
     );
     wp_add_inline_script(
         'tdd-display-density',
-        'window.TDDSettings = ' . wp_json_encode(tdd_get_settings()) . '; window.TDDAdmin = true;',
+        'window.TDDSettings = ' . wp_json_encode(tdd_get_settings()) . '; window.TDDAdmin = ' . ($is_settings_page ? 'true' : 'false') . '; window.TDDPreviewUrl = ' . wp_json_encode(home_url('/')) . ';',
         'before'
     );
 }

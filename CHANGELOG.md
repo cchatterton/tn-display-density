@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 - 2026-10-25
+
+- Move sliders in 0.1 increments while retaining precise numeric entry.
+- Preview the current display calibration temporarily on the site homepage.
+- Choose frontend-only or frontend-and-admin scaling.
+
 ## 0.3.0 - 2026-10-25
 
 - Move Display Density to Appearance and introduce the branded admin layout.

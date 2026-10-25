@@ -1,12 +1,14 @@
 # TN Display Density
 
 Author: Techn
-Version: 0.3.0
+Version: 0.4.0
 Branding mode: Author Branded
 
 A small WordPress plugin that uses browser zoom to compensate for desktop display scaling. It uses the Settings API and vanilla JavaScript. Windows defaults to inverse-DPR calibration `0.85`; macOS defaults to native zoom (`0`). A configured Mac default factor applies when effective DPR is below `1.5`; Retina-range displays remain native. Mobile and tablet devices are untouched.
 
 Administrators can save a separate calibration for each browser-observed scenario, identified by operating system, rounded DPR and reported display dimensions. Saved scenarios override the platform defaults. The Appearance page reports the current scenario and lets administrators save a value after changing macOS or Windows display scaling, or moving to another monitor. Optional labels such as “More Space” or “Dell monitor” are for reference; the browser cannot read those operating-system setting names.
+
+Sliders move in 0.1 increments, while the paired number fields accept precise values. The current display can be previewed on the site homepage in a new tab before saving; the temporary preview has an exit link. A scope setting applies calibration to frontend pages only (default) or to both frontend and WordPress admin screens.
 
 Windows compensation accepts any finite non-negative value. A value of 1 applies full inverse-DPR compensation; values above 1 make a stronger adjustment. Mac accepts 0 for native zoom or any positive finite factor. If a calculated zoom is not finite or positive, the page falls back to 100%.
 

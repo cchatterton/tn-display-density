@@ -9,6 +9,10 @@
         /Windows/i.test(userAgent) ? 'windows' :
         /Macintosh|Mac OS X/i.test(userAgent) ? 'mac' : null;
     let resolutionQuery = null;
+    const previewParameter = !window.TDDAdmin && window.TDDPreviewAllowed && window.location
+        ? new URLSearchParams(window.location.search).get('tn_display_density_preview') : null;
+    const previewValue = previewParameter !== null && previewParameter !== ''
+        ? Number(previewParameter) : null;
 
     function environment() {
         const dpr = window.devicePixelRatio;
@@ -54,27 +58,25 @@
         return display.dpr < 1.5 ? Number(settings.mac_compensation) : 0;
     }
 
+    function zoomFor(display, calibration) {
+        if (!display || !validCalibration(calibration)) {
+            return 1;
+        }
+        const zoom = display.platform === 'windows'
+            ? 1 + (1 / display.rawDpr - 1) * calibration
+            : calibration === 0 ? 1 : calibration;
+        return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
+    }
+
     function applyDisplayDensity() {
         const display = environment();
         let zoom = 1;
 
         if (display) {
             const profile = matchingProfile(display);
-            const calibration = profile ? Number(profile.value) : fallbackCalibration(display);
-
-            if (validCalibration(calibration)) {
-                if (display.platform === 'windows') {
-                    const relativeScale = display.rawDpr / 1;
-                    const compensation = 1 / relativeScale;
-                    zoom = 1 + (compensation - 1) * calibration;
-                } else {
-                    zoom = calibration === 0 ? 1 : calibration;
-                }
-            }
-        }
-
-        if (!Number.isFinite(zoom) || zoom <= 0) {
-            zoom = 1;
+            const calibration = validCalibration(previewValue) && previewParameter !== null
+                ? previewValue : profile ? Number(profile.value) : fallbackCalibration(display);
+            zoom = zoomFor(display, calibration);
         }
 
         if (document.documentElement.style.zoom !== String(zoom)) {
@@ -113,11 +115,27 @@
         const currentRange = document.getElementById('tdd_current_value_range');
         const label = document.getElementById('tdd_current_label');
         const button = document.getElementById('tdd_save_current');
+        const previewButton = document.getElementById('tdd_preview_current');
+        const previewStatus = document.getElementById('tdd_preview_status');
         let currentKey = null;
 
-        if (!summary || !value || !currentRange || !label || !button) {
+        if (!summary || !value || !currentRange || !label || !button || !previewButton || !previewStatus) {
             return function () {};
         }
+
+        previewButton.addEventListener('click', function () {
+            const display = environment();
+            const calibration = Number(value.value);
+            if (!display || value.value === '' || !validCalibration(calibration) ||
+                (display.platform === 'windows' && 1 + (1 / display.rawDpr - 1) * calibration <= 0)) {
+                previewStatus.textContent = 'Enter a value that produces a positive zoom to preview it.';
+                return;
+            }
+            const url = new URL(window.TDDPreviewUrl, window.location.href);
+            url.searchParams.set('tn_display_density_preview', String(calibration));
+            previewStatus.textContent = 'Opening a temporary site preview. This value is not saved.';
+            window.open(url.toString(), '_blank', 'noopener');
+        });
 
         return function updateAdminDisplay() {
             const display = environment();
@@ -128,6 +146,7 @@
                 currentRange.disabled = true;
                 label.disabled = true;
                 button.disabled = true;
+                previewButton.disabled = true;
                 currentKey = null;
                 return;
             }
@@ -159,6 +178,7 @@
             currentRange.disabled = false;
             label.disabled = false;
             button.disabled = false;
+            previewButton.disabled = false;
         };
     }
 
@@ -166,7 +186,36 @@
         return;
     }
 
-    const update = window.TDDAdmin ? setupAdmin() : applyDisplayDensity;
+    if (!window.TDDAdmin && previewParameter !== null && validCalibration(previewValue)) {
+        const showPreviewNotice = function () {
+            const notice = document.createElement('div');
+            const exit = document.createElement('a');
+            const exitUrl = new URL(window.location.href);
+            exitUrl.searchParams.delete('tn_display_density_preview');
+            notice.textContent = 'Temporary display calibration preview · ';
+            exit.textContent = 'Exit preview';
+            exit.href = exitUrl.toString();
+            exit.style.cssText = 'color:#fff;text-decoration:underline;font-weight:700';
+            notice.appendChild(exit);
+            notice.style.cssText = 'position:fixed;z-index:2147483647;right:1rem;bottom:1rem;padding:.7rem 1rem;background:#002840;color:#fff;border-radius:.4rem;font:600 .9rem/1.4 sans-serif;box-shadow:0 .2rem .8rem #0005';
+            document.body.appendChild(notice);
+        };
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showPreviewNotice, {once: true});
+        } else {
+            showPreviewNotice();
+        }
+    }
+
+    const adminUpdate = window.TDDAdmin ? setupAdmin() : null;
+    function update() {
+        if (adminUpdate) {
+            adminUpdate();
+        }
+        if (!isMobileOrTablet && (!window.TDDAdmin || settings.scope === 'all')) {
+            applyDisplayDensity();
+        }
+    }
 
     function watchResolution() {
         const dpr = window.devicePixelRatio;

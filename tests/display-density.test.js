@@ -4,13 +4,16 @@ const vm = require('node:vm');
 
 const script = fs.readFileSync('tn-display-density/display-density.js', 'utf8');
 
-function browser(userAgent, dpr, width, height, settings, admin = false) {
+function browser(userAgent, dpr, width, height, settings, admin = false, options = {}) {
     const listeners = {};
     const elements = {};
+    const opened = [];
+    const appended = [];
     for (const id of ['tdd_current_summary', 'tdd_current_value', 'tdd_current_label',
-        'tdd_save_current', 'tdd_current_platform', 'tdd_current_dpr',
-        'tdd_current_width', 'tdd_current_height']) {
-        elements[id] = {value: '', textContent: '', disabled: true, max: ''};
+        'tdd_save_current', 'tdd_preview_current', 'tdd_preview_status',
+        'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height']) {
+        elements[id] = {value: '', textContent: '', disabled: true, max: '', listeners: {},
+            addEventListener(name, callback) {this.listeners[name] = callback;}};
     }
     const sliders = [];
     if (admin) {
@@ -30,6 +33,9 @@ function browser(userAgent, dpr, width, height, settings, admin = false) {
     const root = {style: {zoom: ''}};
     const document = {
         documentElement: root,
+        readyState: 'complete',
+        body: {appendChild: child => appended.push(child)},
+        createElement: () => ({style: {}, appendChild(child) {this.child = child;}}),
         getElementById: id => elements[id],
         querySelectorAll: () => sliders,
         addEventListener: (name, callback) => {listeners[name] = callback;}
@@ -37,6 +43,10 @@ function browser(userAgent, dpr, width, height, settings, admin = false) {
     const window = {
         TDDSettings: settings,
         TDDAdmin: admin,
+        TDDPreviewAllowed: options.previewAllowed || false,
+        TDDPreviewUrl: 'https://example.test/',
+        location: {href: 'https://example.test/' + (options.query || ''), search: options.query || ''},
+        open: (url, target, features) => opened.push({url, target, features}),
         devicePixelRatio: dpr,
         screen: {width, height},
         innerWidth: 1200,
@@ -48,8 +58,8 @@ function browser(userAgent, dpr, width, height, settings, admin = false) {
         })
     };
     const navigator = {userAgent, platform: '', maxTouchPoints: 0};
-    vm.runInNewContext(script, {window, document, navigator, Number});
-    return {window, root, elements, listeners, sliders};
+    vm.runInNewContext(script, {window, document, navigator, Number, URL, URLSearchParams});
+    return {window, root, elements, listeners, sliders, opened, appended};
 }
 
 const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -129,12 +139,29 @@ admin.elements.tdd_current_value.value = '2.5';
 admin.elements.tdd_current_value.listeners.input();
 assert.equal(admin.elements.tdd_current_value_range.max, '3');
 assert.equal(admin.elements.tdd_current_value_range.value, '2.5');
+admin.elements.tdd_current_value.value = '0.8';
+admin.elements.tdd_preview_current.listeners.click();
+assert.equal(admin.opened[0].url, 'https://example.test/?tn_display_density_preview=0.8');
+assert.equal(admin.opened[0].features, 'noopener');
+assert.match(admin.elements.tdd_preview_status.textContent, /not saved/);
 assert.equal(admin.elements.tdd_save_current.disabled, false);
+assert.equal(admin.elements.tdd_preview_current.disabled, false);
 admin.window.screen.width = 1920;
 admin.window.screen.height = 1080;
 admin.window.devicePixelRatio = 1;
 admin.listeners.focus();
 assert.equal(admin.elements.tdd_current_value.value, '0.85');
 assert.equal(admin.elements.tdd_current_dpr.value, '1.00');
+
+const preview = browser(mac, 2, 1440, 900, macSettings, false,
+    {previewAllowed: true, query: '?tn_display_density_preview=0.7'});
+assert.equal(preview.root.style.zoom, '0.7');
+assert.equal(preview.appended.length, 1);
+assert.equal(preview.appended[0].child.href, 'https://example.test/');
+assert.equal(browser(mac, 2, 1440, 900, macSettings, false,
+    {query: '?tn_display_density_preview=0.7'}).root.style.zoom, '0.9');
+
+const allAdmin = browser(mac, 2, 1440, 900, {...macSettings, scope: 'all'}, true);
+assert.equal(allAdmin.root.style.zoom, '0.9');
 
 console.log('Display scenario checks passed');
