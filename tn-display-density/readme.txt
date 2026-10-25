@@ -3,16 +3,18 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.1.2
+Stable tag: 0.2.0
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Compensate for desktop display scaling on Windows and macOS with two WordPress settings.
+Compensate for desktop display scaling with Windows, Mac and display-scenario calibration controls.
 
 == Description ==
 
-TN Display Density uses browser zoom to compensate for desktop display scaling on Windows and macOS. Windows uses inverse device-pixel-ratio compensation with a default calibration of 0.85. macOS stays at native zoom by default; an administrator can set a direct zoom factor for a standard-density display. Retina-range displays remain native. Mobile and tablet devices are left unchanged.
+TN Display Density uses browser zoom to compensate for desktop display scaling on Windows and macOS. Windows uses inverse device-pixel-ratio compensation with a default calibration of 0.85. macOS stays at native zoom by default; an administrator can set a direct zoom factor for standard-density displays. Retina-range displays remain native unless a matching scenario has been calibrated. Mobile and tablet devices are left unchanged.
+
+Administrators can save separate calibrations for the browser-observed Windows or Mac environment, device pixel ratio and display dimensions. Switch a macOS display scaling choice or move to another monitor, then open Settings > Display Density and save the current scenario. The same process works for Windows display scaling choices. The browser cannot read the exact operating-system display setting name; optional scenario names are for administrators' reference.
 
 Browser data cannot reliably identify operating-system display scaling on every monitor. These settings provide a practical approximation.
 
@@ -22,6 +24,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Settings > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.2.0 =
+* Add per-display scenario calibration controls for Windows and macOS.
 
 = 0.1.2 =
 * Apply the optional Mac factor only when device pixel ratio drops below Retina range.

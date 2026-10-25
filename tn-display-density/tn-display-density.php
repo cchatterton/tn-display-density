@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.1.2
+ * Version: 0.2.0
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.1.2');
+define('TDD_VERSION', '0.2.0');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -29,6 +29,7 @@ function tdd_get_settings() {
     return wp_parse_args(is_array($saved) ? $saved : array(), array(
         'windows_compensation' => 0.85,
         'mac_compensation'     => 0,
+        'profiles'             => array(),
     ));
 }
 
@@ -65,7 +66,77 @@ function tdd_sanitize_settings($input) {
         $settings[$key] = $value;
     }
 
+    $settings['profiles'] = array();
+    $submitted = is_array($input) && isset($input['profiles']) && is_array($input['profiles'])
+        ? $input['profiles'] : array();
+
+    $previous_profiles = isset($previous['profiles']) && is_array($previous['profiles'])
+        ? array_values($previous['profiles']) : array();
+
+    foreach ($submitted as $index => $raw_profile) {
+        if (is_array($raw_profile) && !empty($raw_profile['remove'])) {
+            continue;
+        }
+
+        $profile = tdd_sanitize_profile($raw_profile);
+        if ($profile === null) {
+            add_settings_error('tdd_settings', 'tdd_invalid_profile', __('An invalid display calibration was kept at its previous value.', 'tn-display-density'));
+            $profile = isset($previous_profiles[$index]) ? $previous_profiles[$index] : null;
+        }
+        if ($profile !== null) {
+            $settings['profiles'][tdd_profile_key($profile)] = $profile;
+        }
+    }
+
+    if (is_array($input) && !empty($input['save_current'])) {
+        $profile = tdd_sanitize_profile(isset($input['current']) ? $input['current'] : null);
+        if ($profile === null) {
+            add_settings_error('tdd_settings', 'tdd_invalid_current', __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
+        } else {
+            $settings['profiles'][tdd_profile_key($profile)] = $profile;
+        }
+    }
+
     return $settings;
+}
+
+function tdd_profile_key($profile) {
+    return $profile['platform'] . '|' . number_format($profile['dpr'], 2, '.', '') . '|' . $profile['width'] . 'x' . $profile['height'];
+}
+
+function tdd_sanitize_profile($raw) {
+    if (!is_array($raw) || !isset($raw['platform'], $raw['dpr'], $raw['width'], $raw['height'], $raw['value'])) {
+        return null;
+    }
+
+    $platform = is_scalar($raw['platform']) ? (string) $raw['platform'] : '';
+    $dpr = is_scalar($raw['dpr']) && is_numeric($raw['dpr']) ? (float) $raw['dpr'] : 0;
+    $width = filter_var($raw['width'], FILTER_VALIDATE_INT);
+    $height = filter_var($raw['height'], FILTER_VALIDATE_INT);
+    $value = is_scalar($raw['value']) && is_numeric($raw['value']) ? (float) $raw['value'] : -1;
+
+    if (!in_array($platform, array('windows', 'mac'), true) || !is_finite($dpr) || $dpr < 0.5 || $dpr > 8 ||
+        $width === false || $width < 320 || $width > 20000 ||
+        $height === false || $height < 200 || $height > 20000 || !is_finite($value)) {
+        return null;
+    }
+
+    if ($platform === 'windows' && ($value < 0 || $value > 1)) {
+        return null;
+    }
+    if ($platform === 'mac' && $value !== 0.0 && ($value < 0.65 || $value > 1.25)) {
+        return null;
+    }
+
+    return array(
+        'platform' => $platform,
+        'dpr'      => round($dpr, 2),
+        'width'    => $width,
+        'height'   => $height,
+        'value'    => $value,
+        'label'    => isset($raw['label']) && is_scalar($raw['label'])
+            ? sanitize_text_field((string) $raw['label']) : '',
+    );
 }
 
 function tdd_register_settings() {
@@ -75,6 +146,7 @@ function tdd_register_settings() {
         'default'           => array(
             'windows_compensation' => 0.85,
             'mac_compensation'     => 0,
+            'profiles'             => array(),
         ),
     ));
 
@@ -90,6 +162,20 @@ function tdd_register_settings() {
         'tdd_mac_compensation',
         __('Mac compensation', 'tn-display-density'),
         'tdd_render_mac_field',
+        'tdd_settings',
+        'tdd_calibration'
+    );
+    add_settings_field(
+        'tdd_current_display',
+        __('Current display', 'tn-display-density'),
+        'tdd_render_current_display',
+        'tdd_settings',
+        'tdd_calibration'
+    );
+    add_settings_field(
+        'tdd_saved_displays',
+        __('Saved display scenarios', 'tn-display-density'),
+        'tdd_render_saved_displays',
         'tdd_settings',
         'tdd_calibration'
     );
@@ -117,6 +203,95 @@ function tdd_render_mac_field() {
     <p class="description" id="tdd_mac_help">
         <?php esc_html_e('Default 0 leaves macOS at native zoom. Set a factor from 0.65 to 1.25 for standard-density displays (for example, 0.85 for 85%). Retina-range displays stay native.', 'tn-display-density'); ?>
     </p>
+    <?php
+}
+
+function tdd_render_current_display() {
+    ?>
+    <p id="tdd_current_summary" aria-live="polite">
+        <?php esc_html_e('Detecting this display…', 'tn-display-density'); ?>
+    </p>
+    <label for="tdd_current_value"><?php esc_html_e('Calibration for this display', 'tn-display-density'); ?></label>
+    <input type="number" id="tdd_current_value" name="tdd_settings[current][value]"
+        min="0" max="1.25" step="0.01" disabled aria-describedby="tdd_current_help">
+    <p>
+        <label for="tdd_current_label"><?php esc_html_e('Scenario name (optional)', 'tn-display-density'); ?></label>
+        <input type="text" id="tdd_current_label" name="tdd_settings[current][label]"
+            class="regular-text" placeholder="<?php echo esc_attr__('For example, Dell monitor or More Space', 'tn-display-density'); ?>" disabled>
+    </p>
+    <input type="hidden" id="tdd_current_platform" name="tdd_settings[current][platform]">
+    <input type="hidden" id="tdd_current_dpr" name="tdd_settings[current][dpr]">
+    <input type="hidden" id="tdd_current_width" name="tdd_settings[current][width]">
+    <input type="hidden" id="tdd_current_height" name="tdd_settings[current][height]">
+    <p class="description" id="tdd_current_help">
+        <?php esc_html_e('Switch the operating-system display mode or move this window to another monitor, then save a calibration for the observed scenario. Windows uses 0–1 inverse-DPR strength; Mac uses 0 for native or 0.65–1.25 as a direct zoom factor.', 'tn-display-density'); ?>
+    </p>
+    <button type="submit" class="button button-secondary" id="tdd_save_current"
+        name="tdd_settings[save_current]" value="1" disabled>
+        <?php esc_html_e('Save calibration for this display', 'tn-display-density'); ?>
+    </button>
+    <?php
+}
+
+function tdd_render_saved_displays() {
+    $settings = tdd_get_settings();
+    $profiles = is_array($settings['profiles']) ? $settings['profiles'] : array();
+
+    if (!$profiles) {
+        echo '<p>' . esc_html__('No display scenarios saved yet.', 'tn-display-density') . '</p>';
+        return;
+    }
+    ?>
+    <table class="widefat striped">
+        <thead><tr>
+            <th scope="col"><?php esc_html_e('Observed scenario', 'tn-display-density'); ?></th>
+            <th scope="col"><?php esc_html_e('Calibration', 'tn-display-density'); ?></th>
+            <th scope="col"><?php esc_html_e('Remove', 'tn-display-density'); ?></th>
+        </tr></thead>
+        <tbody>
+        <?php foreach (array_values($profiles) as $index => $profile) :
+            $field = 'tdd_settings[profiles][' . $index . ']';
+            $description = sprintf(
+                '%s · DPR %s · %s × %s',
+                $profile['platform'] === 'mac' ? 'Mac' : 'Windows',
+                number_format((float) $profile['dpr'], 2, '.', ''),
+                $profile['width'],
+                $profile['height']
+            );
+            ?>
+            <tr>
+                <th scope="row">
+                    <?php if (!empty($profile['label'])) : ?>
+                        <strong><?php echo esc_html($profile['label']); ?></strong><br>
+                    <?php endif; ?>
+                    <?php echo esc_html($description); ?>
+                    <input type="hidden" name="<?php echo esc_attr($field . '[label]'); ?>"
+                        value="<?php echo esc_attr(isset($profile['label']) ? $profile['label'] : ''); ?>">
+                </th>
+                <td>
+                    <label class="screen-reader-text" for="tdd_profile_<?php echo esc_attr((string) $index); ?>">
+                        <?php echo esc_html(sprintf(__('Calibration for %s', 'tn-display-density'), $description)); ?>
+                    </label>
+                    <input type="number" id="tdd_profile_<?php echo esc_attr((string) $index); ?>"
+                        name="<?php echo esc_attr($field . '[value]'); ?>"
+                        value="<?php echo esc_attr((string) $profile['value']); ?>"
+                        min="0" max="<?php echo $profile['platform'] === 'mac' ? '1.25' : '1'; ?>" step="0.01">
+                    <?php foreach (array('platform', 'dpr', 'width', 'height') as $key) : ?>
+                        <input type="hidden" name="<?php echo esc_attr($field . '[' . $key . ']'); ?>"
+                            value="<?php echo esc_attr((string) $profile[$key]); ?>">
+                    <?php endforeach; ?>
+                </td>
+                <td>
+                    <label>
+                        <input type="checkbox" name="<?php echo esc_attr($field . '[remove]'); ?>" value="1">
+                        <?php esc_html_e('Remove', 'tn-display-density'); ?>
+                    </label>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+        </tbody>
+    </table>
+    <p class="description"><?php esc_html_e('Save settings to apply edits or removals.', 'tn-display-density'); ?></p>
     <?php
 }
 
@@ -169,3 +344,23 @@ function tdd_enqueue_script() {
     );
 }
 add_action('wp_enqueue_scripts', 'tdd_enqueue_script');
+
+function tdd_enqueue_admin_script($hook) {
+    if ($hook !== 'settings_page_tn-display-density') {
+        return;
+    }
+
+    wp_enqueue_script(
+        'tdd-display-density',
+        plugins_url('display-density.js', __FILE__),
+        array(),
+        TDD_VERSION,
+        true
+    );
+    wp_add_inline_script(
+        'tdd-display-density',
+        'window.TDDSettings = ' . wp_json_encode(tdd_get_settings()) . '; window.TDDAdmin = true;',
+        'before'
+    );
+}
+add_action('admin_enqueue_scripts', 'tdd_enqueue_admin_script');
