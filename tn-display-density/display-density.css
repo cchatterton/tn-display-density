@@ -54,6 +54,10 @@
 .tdd-admin .tdd-slider input[type="range"]:disabled { cursor: not-allowed; }
 .tdd-admin .tdd-slider__scale { display: flex; justify-content: space-between; color: var(--tdd-muted); font-size: .75rem; }
 .tdd-admin .tdd-slider__help { margin: .7rem 0 0; color: var(--tdd-muted); line-height: 1.45; }
+.tdd-admin .tdd-apply { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem 1rem; min-width: 0; margin: .85rem 0 0; padding: 0; border: 0; }
+.tdd-admin .tdd-apply legend { width: 100%; margin-bottom: .2rem; padding: 0; color: var(--tdd-muted); font-size: .82rem; font-weight: 600; }
+.tdd-admin .tdd-apply label { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; cursor: pointer; }
+.tdd-admin .tdd-apply input[type="checkbox"] { margin: 0; accent-color: var(--tdd-navy); }
 .tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .tdd-admin .tdd-panel__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .6rem; }
 .tdd-admin .tdd-preview-status { min-height: 1.3rem; margin: .45rem 0 0; color: var(--tdd-muted); }
@@ -76,16 +80,11 @@
 .tdd-admin .tdd-slider--compact input[type="range"] { grid-column: 1; grid-row: 1; }
 .tdd-admin .tdd-slider--compact .tdd-slider__scale { grid-column: 1; grid-row: 2; }
 .tdd-admin .tdd-slider--compact .tdd-slider__help { grid-column: 1 / -1; margin: .25rem 0 0; font-size: .75rem; }
+.tdd-admin .tdd-saved-row .tdd-apply { margin-top: .5rem; font-size: .82rem; }
 .tdd-admin .tdd-remove { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
 .tdd-admin .tdd-remove input { margin: 0; }
 .tdd-admin .tdd-empty { margin: 0; padding: 1rem; color: var(--tdd-muted); background: var(--tdd-soft); border-radius: .4rem; }
 .tdd-admin .tdd-help { color: var(--tdd-muted); }
-.tdd-admin .tdd-scope-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
-.tdd-admin .tdd-scope-option { display: flex; align-items: flex-start; gap: .7rem; padding: 1rem 1.1rem; border: .0625rem solid var(--tdd-border); border-radius: .55rem; cursor: pointer; }
-.tdd-admin .tdd-scope-option:has(input:checked) { border-color: var(--tdd-navy); background: var(--tdd-soft); }
-.tdd-admin .tdd-scope-option input { margin: .15rem 0 0; accent-color: var(--tdd-navy); }
-.tdd-admin .tdd-scope-option strong, .tdd-admin .tdd-scope-option small { display: block; }
-.tdd-admin .tdd-scope-option small { margin-top: .3rem; color: var(--tdd-muted); line-height: 1.4; }
 .tdd-admin :is(input, button, a):focus-visible { outline: .18rem solid var(--tdd-orange-dark); outline-offset: .16rem; box-shadow: none; }
 @media (max-width: 60rem) {
     .tdd-admin .tdd-hero { align-items: start; flex-direction: column; gap: .5rem; }
@@ -96,7 +95,7 @@
     .tdd-admin .tdd-hero { padding: 1.5rem; }
     .tdd-admin .tdd-hero__version { right: 1.5rem; }
     .tdd-admin .tdd-panel { padding: 1.2rem; }
-    .tdd-admin .tdd-default-grid, .tdd-admin .tdd-scope-options { grid-template-columns: 1fr; }
+    .tdd-admin .tdd-default-grid { grid-template-columns: 1fr; }
     .tdd-admin .tdd-panel__footer, .tdd-admin .tdd-save-bar { align-items: stretch; flex-direction: column; }
     .tdd-admin .tdd-panel__actions { justify-content: stretch; }
     .tdd-admin .tdd-panel__actions .button { flex: 1 1 11rem; }

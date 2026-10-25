@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.4.2
+ * Version: 0.5.0
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,26 +18,41 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.4.2');
+define('TDD_VERSION', '0.5.0');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
 
 function tdd_get_settings() {
     $saved = get_option('tdd_settings', array());
+    $saved = is_array($saved) ? $saved : array();
+    $legacy_admin = isset($saved['scope']) && $saved['scope'] === 'all';
+    $windows = isset($saved['windows_compensation']) ? $saved['windows_compensation'] : 0.85;
+    $mac = isset($saved['mac_compensation']) ? $saved['mac_compensation'] : 0;
+    $profiles = isset($saved['profiles']) && is_array($saved['profiles']) ? $saved['profiles'] : array();
+    foreach ($profiles as $key => $profile) {
+        if (!is_array($profile)) {
+            unset($profiles[$key]);
+            continue;
+        }
+        $profile['apply_frontend'] = isset($profile['apply_frontend']) ? (bool) $profile['apply_frontend'] : true;
+        $profile['apply_admin'] = isset($profile['apply_admin']) ? (bool) $profile['apply_admin'] : $legacy_admin;
+        $profiles[$key] = $profile;
+    }
 
-    return wp_parse_args(is_array($saved) ? $saved : array(), array(
-        'windows_compensation' => 0.85,
-        'mac_compensation'     => 0,
-        'scope'                => 'frontend',
-        'profiles'             => array(),
-    ));
+    return array(
+        'windows_frontend_compensation' => isset($saved['windows_frontend_compensation']) ? $saved['windows_frontend_compensation'] : $windows,
+        'windows_admin_compensation'    => isset($saved['windows_admin_compensation']) ? $saved['windows_admin_compensation'] : ($legacy_admin ? $windows : 0),
+        'mac_frontend_compensation'     => isset($saved['mac_frontend_compensation']) ? $saved['mac_frontend_compensation'] : $mac,
+        'mac_admin_compensation'        => isset($saved['mac_admin_compensation']) ? $saved['mac_admin_compensation'] : ($legacy_admin ? $mac : 0),
+        'profiles'                      => $profiles,
+    );
 }
 
 function tdd_sanitize_settings($input) {
     $previous = tdd_get_settings();
     $settings = array();
-    foreach (array('windows_compensation', 'mac_compensation') as $key) {
+    foreach (array('windows_frontend_compensation', 'windows_admin_compensation', 'mac_frontend_compensation', 'mac_admin_compensation') as $key) {
         $raw = is_array($input) && isset($input[$key]) ? $input[$key] : null;
         $valid = is_scalar($raw) && is_numeric($raw);
         $value = $valid ? (float) $raw : 0;
@@ -48,7 +63,7 @@ function tdd_sanitize_settings($input) {
             add_settings_error(
                 'tdd_settings',
                 'tdd_invalid_' . $key,
-                $key === 'windows_compensation'
+                strpos($key, 'windows_') === 0
                     ? __('Windows compensation must be a finite, non-negative number.', 'tn-display-density')
                     : __('Mac compensation must be 0 for native zoom or a positive, finite zoom factor.', 'tn-display-density')
             );
@@ -57,11 +72,6 @@ function tdd_sanitize_settings($input) {
 
         $settings[$key] = $value;
     }
-
-    $scope = is_array($input) && isset($input['scope']) && is_scalar($input['scope'])
-        ? (string) $input['scope'] : '';
-    $settings['scope'] = in_array($scope, array('frontend', 'all'), true)
-        ? $scope : $previous['scope'];
 
     $settings['profiles'] = array();
     $submitted = is_array($input) && isset($input['profiles']) && is_array($input['profiles'])
@@ -77,7 +87,10 @@ function tdd_sanitize_settings($input) {
 
         $profile = tdd_sanitize_profile($raw_profile);
         if ($profile === null) {
-            add_settings_error('tdd_settings', 'tdd_invalid_profile', __('An invalid display calibration was kept at its previous value.', 'tn-display-density'));
+            $missing_area = is_array($raw_profile) && empty($raw_profile['apply_frontend']) && empty($raw_profile['apply_admin']);
+            add_settings_error('tdd_settings', 'tdd_invalid_profile', $missing_area
+                ? __('Choose Frontend, WordPress admin, or both for each saved calibration.', 'tn-display-density')
+                : __('An invalid display calibration was kept at its previous value.', 'tn-display-density'));
             $profile = isset($previous_profiles[$index]) ? $previous_profiles[$index] : null;
         }
         if ($profile !== null) {
@@ -86,9 +99,13 @@ function tdd_sanitize_settings($input) {
     }
 
     if (is_array($input) && !empty($input['save_current'])) {
-        $profile = tdd_sanitize_profile(isset($input['current']) ? $input['current'] : null);
+        $current = isset($input['current']) ? $input['current'] : null;
+        $profile = tdd_sanitize_profile($current);
         if ($profile === null) {
-            add_settings_error('tdd_settings', 'tdd_invalid_current', __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
+            $missing_area = is_array($current) && empty($current['apply_frontend']) && empty($current['apply_admin']);
+            add_settings_error('tdd_settings', 'tdd_invalid_current', $missing_area
+                ? __('Choose Frontend, WordPress admin, or both before saving this calibration.', 'tn-display-density')
+                : __('This display could not be identified. No calibration was saved for it.', 'tn-display-density'));
         } else {
             $key = tdd_profile_key($profile);
             if ($profile['label'] === '' && !empty($settings['profiles'][$key]['label'])) {
@@ -126,12 +143,20 @@ function tdd_sanitize_profile($raw) {
         return null;
     }
 
+    $apply_frontend = !empty($raw['apply_frontend']);
+    $apply_admin = !empty($raw['apply_admin']);
+    if (!$apply_frontend && !$apply_admin) {
+        return null;
+    }
+
     return array(
         'platform' => $platform,
         'dpr'      => round($dpr, 2),
         'width'    => $width,
         'height'   => $height,
         'value'    => $value,
+        'apply_frontend' => $apply_frontend,
+        'apply_admin'    => $apply_admin,
         'label'    => isset($raw['label']) && is_scalar($raw['label'])
             ? sanitize_text_field((string) $raw['label']) : '',
     );
@@ -142,10 +167,11 @@ function tdd_register_settings() {
         'type'              => 'array',
         'sanitize_callback' => 'tdd_sanitize_settings',
         'default'           => array(
-            'windows_compensation' => 0.85,
-            'mac_compensation'     => 0,
-            'scope'                => 'frontend',
-            'profiles'             => array(),
+            'windows_frontend_compensation' => 0.85,
+            'windows_admin_compensation'    => 0,
+            'mac_frontend_compensation'     => 0,
+            'mac_admin_compensation'        => 0,
+            'profiles'                      => array(),
         ),
     ));
 }
@@ -186,6 +212,28 @@ function tdd_render_slider($id, $name, $value, $label, $help, $disabled = false,
     <?php
 }
 
+function tdd_render_scope_toggles($name, $id, $apply_frontend, $apply_admin, $disabled = false) {
+    ?>
+    <fieldset class="tdd-apply">
+        <legend><?php esc_html_e('Apply to', 'tn-display-density'); ?></legend>
+        <label>
+            <input type="hidden" name="<?php echo esc_attr($name . '[apply_frontend]'); ?>" value="0">
+            <input type="checkbox" id="<?php echo esc_attr($id . '_frontend'); ?>"
+                name="<?php echo esc_attr($name . '[apply_frontend]'); ?>" value="1"
+                <?php checked((bool) $apply_frontend, true); ?> <?php disabled($disabled); ?>>
+            <?php esc_html_e('Frontend', 'tn-display-density'); ?>
+        </label>
+        <label>
+            <input type="hidden" name="<?php echo esc_attr($name . '[apply_admin]'); ?>" value="0">
+            <input type="checkbox" id="<?php echo esc_attr($id . '_admin'); ?>"
+                name="<?php echo esc_attr($name . '[apply_admin]'); ?>" value="1"
+                <?php checked((bool) $apply_admin, true); ?> <?php disabled($disabled); ?>>
+            <?php esc_html_e('WordPress admin', 'tn-display-density'); ?>
+        </label>
+    </fieldset>
+    <?php
+}
+
 function tdd_render_current_display() {
     ?>
     <p class="tdd-environment" id="tdd_current_summary" aria-live="polite">
@@ -200,6 +248,7 @@ function tdd_render_current_display() {
         __('Windows uses inverse-DPR strength; Mac uses 0 for native or a positive zoom factor.', 'tn-display-density'),
         true
     );
+    tdd_render_scope_toggles('tdd_settings[current]', 'tdd_current', true, false, true);
     ?>
     <input type="hidden" id="tdd_current_platform" name="tdd_settings[current][platform]">
     <input type="hidden" id="tdd_current_dpr" name="tdd_settings[current][dpr]">
@@ -262,6 +311,7 @@ function tdd_render_saved_displays() {
                             false,
                             true
                         );
+                        tdd_render_scope_toggles($field, 'tdd_profile_' . $index, $profile['apply_frontend'], $profile['apply_admin']);
                         foreach (array('platform', 'dpr', 'width', 'height') as $key) :
                             ?>
                             <input type="hidden" name="<?php echo esc_attr($field . '[' . $key . ']'); ?>"
@@ -333,39 +383,34 @@ function tdd_render_settings_page() {
                 <div class="tdd-default-grid">
                     <?php
                     tdd_render_slider(
-                        'tdd_windows_compensation',
-                        'tdd_settings[windows_compensation]',
-                        $settings['windows_compensation'],
-                        __('Windows compensation', 'tn-display-density'),
+                        'tdd_windows_frontend_compensation',
+                        'tdd_settings[windows_frontend_compensation]',
+                        $settings['windows_frontend_compensation'],
+                        __('Windows frontend', 'tn-display-density'),
                         __('0 uses native zoom; 1 applies full inverse-DPR compensation. Higher values make a stronger adjustment.', 'tn-display-density')
                     );
                     tdd_render_slider(
-                        'tdd_mac_compensation',
-                        'tdd_settings[mac_compensation]',
-                        $settings['mac_compensation'],
-                        __('Mac compensation', 'tn-display-density'),
+                        'tdd_windows_admin_compensation',
+                        'tdd_settings[windows_admin_compensation]',
+                        $settings['windows_admin_compensation'],
+                        __('Windows WordPress admin', 'tn-display-density'),
+                        __('0 uses native zoom; 1 applies full inverse-DPR compensation. Higher values make a stronger adjustment.', 'tn-display-density')
+                    );
+                    tdd_render_slider(
+                        'tdd_mac_frontend_compensation',
+                        'tdd_settings[mac_frontend_compensation]',
+                        $settings['mac_frontend_compensation'],
+                        __('Mac frontend', 'tn-display-density'),
+                        __('0 uses native zoom. A positive factor applies to standard-density displays; Retina-range displays stay native unless calibrated separately.', 'tn-display-density')
+                    );
+                    tdd_render_slider(
+                        'tdd_mac_admin_compensation',
+                        'tdd_settings[mac_admin_compensation]',
+                        $settings['mac_admin_compensation'],
+                        __('Mac WordPress admin', 'tn-display-density'),
                         __('0 uses native zoom. A positive factor applies to standard-density displays; Retina-range displays stay native unless calibrated separately.', 'tn-display-density')
                     );
                     ?>
-                </div>
-            </section>
-            <section class="tdd-panel" aria-labelledby="tdd-scope-title">
-                <div class="tdd-panel__heading">
-                    <p class="tdd-panel__eyebrow"><?php esc_html_e('APPLICATION', 'tn-display-density'); ?></p>
-                    <h2 id="tdd-scope-title"><?php esc_html_e('Where scaling applies', 'tn-display-density'); ?></h2>
-                    <p><?php esc_html_e('Choose whether calibrated zoom also applies to WordPress admin screens.', 'tn-display-density'); ?></p>
-                </div>
-                <div class="tdd-scope-options">
-                    <label class="tdd-scope-option">
-                        <input type="radio" name="tdd_settings[scope]" value="frontend" <?php checked($settings['scope'], 'frontend'); ?>>
-                        <span><strong><?php esc_html_e('Frontend only', 'tn-display-density'); ?></strong>
-                        <small><?php esc_html_e('Scale public pages. Keep WordPress admin at its native size.', 'tn-display-density'); ?></small></span>
-                    </label>
-                    <label class="tdd-scope-option">
-                        <input type="radio" name="tdd_settings[scope]" value="all" <?php checked($settings['scope'], 'all'); ?>>
-                        <span><strong><?php esc_html_e('Frontend and WordPress admin', 'tn-display-density'); ?></strong>
-                        <small><?php esc_html_e('Apply the same saved calibration to public pages and admin screens.', 'tn-display-density'); ?></small></span>
-                    </label>
                 </div>
             </section>
             <section class="tdd-panel" aria-labelledby="tdd-saved-title">
@@ -405,8 +450,19 @@ add_action('wp_enqueue_scripts', 'tdd_enqueue_script');
 
 function tdd_enqueue_admin_script($hook) {
     $is_settings_page = $hook === 'appearance_page_tn-display-density';
-    if (!$is_settings_page && tdd_get_settings()['scope'] !== 'all') {
-        return;
+    $settings = tdd_get_settings();
+    if (!$is_settings_page) {
+        $has_admin_calibration = (float) $settings['windows_admin_compensation'] > 0 ||
+            (float) $settings['mac_admin_compensation'] > 0;
+        foreach ($settings['profiles'] as $profile) {
+            if (!empty($profile['apply_admin'])) {
+                $has_admin_calibration = true;
+                break;
+            }
+        }
+        if (!$has_admin_calibration) {
+            return;
+        }
     }
 
     if ($is_settings_page) {
@@ -426,7 +482,7 @@ function tdd_enqueue_admin_script($hook) {
     );
     wp_add_inline_script(
         'tdd-display-density',
-        'window.TDDSettings = ' . wp_json_encode(tdd_get_settings()) . '; window.TDDAdmin = ' . ($is_settings_page ? 'true' : 'false') . '; window.TDDPreviewUrl = ' . wp_json_encode(home_url('/')) . ';',
+        'window.TDDSettings = ' . wp_json_encode($settings) . '; window.TDDAdmin = ' . ($is_settings_page ? 'true' : 'false') . '; window.TDDIsAdmin = true; window.TDDPreviewUrl = ' . wp_json_encode(home_url('/')) . ';',
         'before'
     );
 }

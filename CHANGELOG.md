@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 - 2026-10-25
+
+- Add separate frontend and WordPress admin defaults for Windows and Mac.
+- Let each current or saved display calibration apply to the frontend, admin, or both.
+- Migrate the previous global scope into the new per-calibration settings without changing existing behaviour.
+
 ## 0.4.2 - 2026-10-25
 
 - Remove helper text beneath saved display calibrations to keep each row compact.

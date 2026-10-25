@@ -2,6 +2,7 @@
     'use strict';
 
     const settings = window.TDDSettings || {};
+    const isAdmin = !!window.TDDIsAdmin;
     const userAgent = navigator.userAgent || '';
     const isMobileOrTablet = /Android|iPad|iPhone|iPod|Mobile|Tablet/i.test(userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -47,15 +48,30 @@
         return settings.profiles && settings.profiles[profileKey(display)];
     }
 
+    function profileApplies(profile) {
+        if (!profile) {
+            return false;
+        }
+        return isAdmin
+            ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin)
+            : (profile.apply_frontend === undefined || !!profile.apply_frontend);
+    }
+
     function validCalibration(value) {
         return Number.isFinite(value) && value >= 0;
     }
 
-    function fallbackCalibration(display) {
+    function fallbackCalibration(display, forAdmin = isAdmin) {
         if (display.platform === 'windows') {
-            return Number(settings.windows_compensation);
+            const value = forAdmin
+                ? settings.windows_admin_compensation ?? (settings.scope === 'all' ? settings.windows_compensation : 0)
+                : settings.windows_frontend_compensation ?? settings.windows_compensation;
+            return Number(value);
         }
-        return display.dpr < 1.5 ? Number(settings.mac_compensation) : 0;
+        const value = forAdmin
+            ? settings.mac_admin_compensation ?? (settings.scope === 'all' ? settings.mac_compensation : 0)
+            : settings.mac_frontend_compensation ?? settings.mac_compensation;
+        return display.dpr < 1.5 ? Number(value) : 0;
     }
 
     function zoomFor(display, calibration) {
@@ -75,7 +91,7 @@
         if (display) {
             const profile = matchingProfile(display);
             const calibration = validCalibration(previewValue) && previewParameter !== null
-                ? previewValue : profile ? Number(profile.value) : fallbackCalibration(display);
+                ? previewValue : profileApplies(profile) ? Number(profile.value) : fallbackCalibration(display);
             zoom = zoomFor(display, calibration);
         }
 
@@ -116,9 +132,12 @@
         const button = document.getElementById('tdd_save_current');
         const previewButton = document.getElementById('tdd_preview_current');
         const previewStatus = document.getElementById('tdd_preview_status');
+        const currentFrontend = document.getElementById('tdd_current_frontend');
+        const currentAdmin = document.getElementById('tdd_current_admin');
         let currentKey = null;
 
-        if (!summary || !value || !currentRange || !button || !previewButton || !previewStatus) {
+        if (!summary || !value || !currentRange || !button || !previewButton || !previewStatus ||
+            !currentFrontend || !currentAdmin) {
             return function () {};
         }
 
@@ -145,6 +164,8 @@
                 currentRange.disabled = true;
                 button.disabled = true;
                 previewButton.disabled = true;
+                currentFrontend.disabled = true;
+                currentAdmin.disabled = true;
                 currentKey = null;
                 return;
             }
@@ -158,8 +179,10 @@
                 (profile ? ' · saved calibration' : ' · using default');
 
             if (key !== currentKey) {
-                const calibration = profile ? Number(profile.value) : fallbackCalibration(display);
+                const calibration = profile ? Number(profile.value) : fallbackCalibration(display, false);
                 value.value = validCalibration(calibration) ? String(calibration) : '0';
+                currentFrontend.checked = profile ? (profile.apply_frontend === undefined || !!profile.apply_frontend) : true;
+                currentAdmin.checked = profile ? (profile.apply_admin === undefined ? settings.scope === 'all' : !!profile.apply_admin) : false;
                 const currentSlider = value.closest('[data-tdd-slider]');
                 if (currentSlider && currentSlider.syncFromValue) {
                     currentSlider.syncFromValue();
@@ -175,6 +198,8 @@
             currentRange.disabled = false;
             button.disabled = false;
             previewButton.disabled = false;
+            currentFrontend.disabled = false;
+            currentAdmin.disabled = false;
         };
     }
 
@@ -208,7 +233,7 @@
         if (adminUpdate) {
             adminUpdate();
         }
-        if (!isMobileOrTablet && (!window.TDDAdmin || settings.scope === 'all')) {
+        if (!isMobileOrTablet) {
             applyDisplayDensity();
         }
     }

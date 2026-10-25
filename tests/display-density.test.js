@@ -11,13 +11,15 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const appended = [];
     for (const id of ['tdd_current_summary', 'tdd_current_value',
         'tdd_save_current', 'tdd_preview_current', 'tdd_preview_status',
-        'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height']) {
-        elements[id] = {value: '', textContent: '', disabled: true, max: '', listeners: {},
+        'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height',
+        'tdd_current_frontend', 'tdd_current_admin']) {
+        elements[id] = {value: '', textContent: '', disabled: true, checked: false, max: '', listeners: {},
             addEventListener(name, callback) {this.listeners[name] = callback;}};
     }
     const sliders = [];
     if (admin) {
-        for (const id of ['tdd_current_value', 'tdd_windows_compensation', 'tdd_mac_compensation']) {
+        for (const id of ['tdd_current_value', 'tdd_windows_frontend_compensation',
+            'tdd_windows_admin_compensation', 'tdd_mac_frontend_compensation', 'tdd_mac_admin_compensation']) {
             const range = {value: '', max: '2', disabled: true, listeners: {}, addEventListener(name, callback) {this.listeners[name] = callback;}};
             const value = elements[id] || {value: '0', disabled: false, listeners: {}, addEventListener(name, callback) {this.listeners[name] = callback;}};
             value.listeners = {};
@@ -43,6 +45,7 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const window = {
         TDDSettings: settings,
         TDDAdmin: admin,
+        TDDIsAdmin: admin || !!options.isAdmin,
         TDDPreviewAllowed: options.previewAllowed || false,
         TDDPreviewUrl: 'https://example.test/',
         location: {href: 'https://example.test/' + (options.query || ''), search: options.query || ''},
@@ -64,7 +67,8 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
 
 const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
 const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X)';
-const defaults = {windows_compensation: 0.85, mac_compensation: 0, profiles: {}};
+const defaults = {windows_frontend_compensation: 0.85, windows_admin_compensation: 0,
+    mac_frontend_compensation: 0, mac_admin_compensation: 0, profiles: {}};
 
 const win = browser(windows, 1.25, 1920, 1080, defaults);
 assert.ok(Math.abs(Number(win.root.style.zoom) - 0.83) < 1e-10);
@@ -74,42 +78,42 @@ assert.equal(win.root.style.zoom, '0.575');
 
 const winProfile = browser(windows, 1.25, 1920, 1080, {
     ...defaults,
-    profiles: {'windows|1.25|1920x1080': {value: 0}}
+    profiles: {'windows|1.25|1920x1080': {value: 0, apply_frontend: true, apply_admin: false}}
 });
 assert.equal(winProfile.root.style.zoom, '1');
 
 const strongerWindows = browser(windows, 1.25, 1920, 1080, {
     ...defaults,
-    windows_compensation: 1.1,
+    windows_frontend_compensation: 1.1,
     profiles: {}
 });
 assert.ok(Math.abs(Number(strongerWindows.root.style.zoom) - 0.78) < 1e-10);
 
 const strongerProfile = browser(windows, 1.25, 1920, 1080, {
     ...defaults,
-    profiles: {'windows|1.25|1920x1080': {value: 1.1}}
+    profiles: {'windows|1.25|1920x1080': {value: 1.1, apply_frontend: true, apply_admin: false}}
 }, true);
 assert.equal(strongerProfile.elements.tdd_current_value.value, '1.1');
 assert.equal(strongerProfile.elements.tdd_current_value.max, '');
 
 const unboundedWindows = browser(windows, 1.25, 1920, 1080, {
-    ...defaults, windows_compensation: 2.1, profiles: {}
+    ...defaults, windows_frontend_compensation: 2.1, profiles: {}
 });
 assert.ok(Math.abs(Number(unboundedWindows.root.style.zoom) - 0.58) < 1e-10);
 assert.equal(browser(windows, 2, 1920, 1080, {
-    ...defaults, windows_compensation: 3, profiles: {}
+    ...defaults, windows_frontend_compensation: 3, profiles: {}
 }).root.style.zoom, '1');
 
 const retina = browser(mac, 2, 1440, 900, defaults);
 assert.equal(retina.root.style.zoom, '1');
 assert.equal(browser(mac, 1, 1920, 1080, {
-    ...defaults, mac_compensation: 0.5
+    ...defaults, mac_frontend_compensation: 0.5
 }).root.style.zoom, '0.5');
 
 const macSettings = {
     ...defaults,
-    mac_compensation: 0.85,
-    profiles: {'mac|2.00|1440x900': {value: 0.9, label: 'More Space'}}
+    mac_frontend_compensation: 0.85,
+    profiles: {'mac|2.00|1440x900': {value: 0.9, label: 'More Space', apply_frontend: true, apply_admin: true}}
 };
 const moving = browser(mac, 2, 1440, 900, macSettings);
 assert.equal(moving.root.style.zoom, '0.9');
@@ -128,7 +132,9 @@ assert.equal(browser('iPad; CPU OS 16_0 like Mac OS X', 2, 1024, 768, defaults).
 assert.equal(browser('Unknown desktop', 2, 1440, 900, defaults).root.style.zoom, '1');
 
 const admin = browser(mac, 2, 1440, 900, macSettings, true);
-assert.equal(admin.root.style.zoom, '');
+assert.equal(admin.root.style.zoom, '0.9');
+assert.equal(admin.elements.tdd_current_frontend.checked, true);
+assert.equal(admin.elements.tdd_current_admin.checked, true);
 assert.equal(admin.elements.tdd_current_value.value, '0.9');
 assert.equal(admin.elements.tdd_current_value_range.value, '0.9');
 admin.elements.tdd_current_value_range.value = '1.1';
@@ -151,6 +157,7 @@ admin.window.devicePixelRatio = 1;
 admin.listeners.focus();
 assert.equal(admin.elements.tdd_current_value.value, '0.85');
 assert.equal(admin.elements.tdd_current_dpr.value, '1.00');
+assert.equal(admin.elements.tdd_current_admin.checked, false);
 
 const preview = browser(mac, 2, 1440, 900, macSettings, false,
     {previewAllowed: true, query: '?tn_display_density_preview=0.7'});
@@ -160,7 +167,23 @@ assert.equal(preview.appended[0].child.href, 'https://example.test/');
 assert.equal(browser(mac, 2, 1440, 900, macSettings, false,
     {query: '?tn_display_density_preview=0.7'}).root.style.zoom, '0.9');
 
-const allAdmin = browser(mac, 2, 1440, 900, {...macSettings, scope: 'all'}, true);
-assert.equal(allAdmin.root.style.zoom, '0.9');
+const adminOnly = browser(windows, 1.25, 1920, 1080, {
+    ...defaults, windows_admin_compensation: 0.4,
+    profiles: {'windows|1.25|1920x1080': {value: 1.1, apply_frontend: false, apply_admin: true}}
+}, false, {isAdmin: true});
+assert.ok(Math.abs(Number(adminOnly.root.style.zoom) - 0.78) < 1e-10);
+assert.ok(Math.abs(Number(browser(windows, 1.25, 1920, 1080, {
+    ...defaults, windows_admin_compensation: 0.4,
+    profiles: {'windows|1.25|1920x1080': {value: 1.1, apply_frontend: false, apply_admin: true}}
+}).root.style.zoom) - 0.83) < 1e-10);
+
+const frontendOnly = browser(windows, 1.25, 1920, 1080, {
+    ...defaults, windows_admin_compensation: 0.4,
+    profiles: {'windows|1.25|1920x1080': {value: 1.1, apply_frontend: true, apply_admin: false}}
+}, false, {isAdmin: true});
+assert.ok(Math.abs(Number(frontendOnly.root.style.zoom) - 0.92) < 1e-10);
+assert.equal(browser(mac, 1, 1920, 1080, {
+    ...defaults, mac_admin_compensation: 0.6
+}, false, {isAdmin: true}).root.style.zoom, '0.6');
 
 console.log('Display scenario checks passed');
