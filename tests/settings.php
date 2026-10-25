@@ -20,7 +20,7 @@ function esc_html_e($text) { echo htmlspecialchars($text, ENT_QUOTES); }
 function esc_attr__($text) { return esc_attr($text); }
 function esc_html__($text) { return esc_html($text); }
 function checked($actual, $expected) { if ($actual === $expected) echo 'checked'; }
-function current_user_can($capability) { return true; }
+function current_user_can($capability) { return !empty($GLOBALS['tdd_can_manage']); }
 function plugins_url($path, $file) { return '/plugins/' . $path; }
 function wp_json_encode($value) { return json_encode($value); }
 function home_url($path) { return 'https://example.test' . $path; }
@@ -32,6 +32,7 @@ function settings_errors() {}
 function settings_fields() {}
 
 require __DIR__ . '/../tn-display-density/tn-display-density.php';
+$GLOBALS['tdd_can_manage'] = true;
 
 function check($condition, $message) {
     if (!$condition) {
@@ -47,6 +48,17 @@ check($defaults['mac_frontend_compensation'] === 0, 'Mac frontend default');
 check($defaults['mac_admin_compensation'] === 0, 'Mac admin default');
 check($defaults['profiles'] === array(), 'Profiles default');
 check(isset($GLOBALS['tnuc_clients']['tn-display-density/tn-display-density.php']), 'Controller client registration');
+$admin_bar = new class {
+    public $nodes = array();
+    public function add_node($node) { $this->nodes[] = $node; }
+};
+tdd_add_scaling_to_admin_bar($admin_bar);
+check(count($admin_bar->nodes) === 1 && $admin_bar->nodes[0]['id'] === 'tdd-scaling' &&
+    $admin_bar->nodes[0]['title'] === 'DDS: 1' && !isset($admin_bar->nodes[0]['href']), 'Admin bar has one minimal non-link scaling item');
+$GLOBALS['tdd_can_manage'] = false;
+tdd_add_scaling_to_admin_bar($admin_bar);
+check(count($admin_bar->nodes) === 1, 'Non-admin users do not get the scaling item');
+$GLOBALS['tdd_can_manage'] = true;
 ob_start();
 tdd_render_settings_page();
 $settings_markup = ob_get_clean();

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.2 - 2026-10-25
+
+- Show the current effective scaling as a small DDS item in the WordPress admin bar.
+
 ## 0.5.1 - 2026-10-25
 
 - Replace each pair of application checkboxes with one Frontend, WordPress admin, or Both control.

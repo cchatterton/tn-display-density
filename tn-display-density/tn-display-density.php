@@ -2,7 +2,7 @@
 /**
  * Plugin Name: TN Display Density
  * Description: Compensates for desktop display scaling on Windows and macOS.
- * Version: 0.5.1
+ * Version: 0.5.2
  * Requires at least: 7.0
  * Requires PHP: 7.4
  * Author: Techn
@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('TDD_VERSION', '0.5.1');
+define('TDD_VERSION', '0.5.2');
 
 require_once __DIR__ . '/controller-client.php';
 tnuc_client_register(__FILE__, 'tn-display-density');
@@ -352,6 +352,18 @@ function tdd_add_settings_page() {
     );
 }
 add_action('admin_menu', 'tdd_add_settings_page');
+
+function tdd_add_scaling_to_admin_bar($admin_bar) {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+
+    $admin_bar->add_node(array(
+        'id'    => 'tdd-scaling',
+        'title' => 'DDS: 1',
+    ));
+}
+add_action('admin_bar_menu', 'tdd_add_scaling_to_admin_bar', 100);
 
 function tdd_render_settings_page() {
     if (!current_user_can('manage_options')) {

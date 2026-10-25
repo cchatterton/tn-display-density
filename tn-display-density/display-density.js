@@ -98,6 +98,10 @@
         if (document.documentElement.style.zoom !== String(zoom)) {
             document.documentElement.style.zoom = String(zoom);
         }
+        const scalingItem = document.querySelector('#wp-admin-bar-tdd-scaling .ab-item');
+        if (scalingItem) {
+            scalingItem.textContent = 'DDS: ' + String(Number(zoom.toPrecision(3)));
+        }
     }
 
     function setupAdmin() {
@@ -284,6 +288,9 @@
     }
 
     onEnvironmentChange();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', update, {once: true});
+    }
     window.addEventListener('resize', onEnvironmentChange);
     window.addEventListener('focus', onEnvironmentChange);
     document.addEventListener('visibilitychange', onEnvironmentChange);

@@ -9,6 +9,7 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const elements = {};
     const opened = [];
     const appended = [];
+    const adminBarItem = {textContent: ''};
     for (const id of ['tdd_current_summary', 'tdd_current_value',
         'tdd_save_current', 'tdd_preview_frontend', 'tdd_preview_admin', 'tdd_preview_status',
         'tdd_current_platform', 'tdd_current_dpr', 'tdd_current_width', 'tdd_current_height',
@@ -38,10 +39,11 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     const root = {style: {zoom: ''}};
     const document = {
         documentElement: root,
-        readyState: 'complete',
+        readyState: options.readyState || 'complete',
         body: {appendChild: child => appended.push(child)},
         createElement: () => ({style: {}, appendChild(child) {this.child = child;}}),
         getElementById: id => elements[id],
+        querySelector: () => options.adminBar && options.barReady !== false ? adminBarItem : null,
         querySelectorAll: () => sliders,
         addEventListener: (name, callback) => {listeners[name] = callback;}
     };
@@ -66,7 +68,7 @@ function browser(userAgent, dpr, width, height, settings, admin = false, options
     };
     const navigator = {userAgent, platform: '', maxTouchPoints: 0};
     vm.runInNewContext(script, {window, document, navigator, Number, URL, URLSearchParams});
-    return {window, root, elements, listeners, sliders, opened, appended};
+    return {window, root, elements, listeners, sliders, opened, appended, adminBarItem};
 }
 
 const windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)';
@@ -74,11 +76,20 @@ const mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X)';
 const defaults = {windows_frontend_compensation: 0.85, windows_admin_compensation: 0,
     mac_frontend_compensation: 0, mac_admin_compensation: 0, profiles: {}};
 
-const win = browser(windows, 1.25, 1920, 1080, defaults);
+const win = browser(windows, 1.25, 1920, 1080, defaults, false, {adminBar: true});
 assert.ok(Math.abs(Number(win.root.style.zoom) - 0.83) < 1e-10);
+assert.equal(win.adminBarItem.textContent, 'DDS: 0.83');
 win.window.devicePixelRatio = 2;
 win.listeners.resolution();
 assert.equal(win.root.style.zoom, '0.575');
+assert.equal(win.adminBarItem.textContent, 'DDS: 0.575');
+
+const delayedBarOptions = {adminBar: true, barReady: false, readyState: 'loading'};
+const delayedBar = browser(windows, 1.25, 1920, 1080, defaults, false, delayedBarOptions);
+assert.equal(delayedBar.adminBarItem.textContent, '');
+delayedBarOptions.barReady = true;
+delayedBar.listeners.DOMContentLoaded();
+assert.equal(delayedBar.adminBarItem.textContent, 'DDS: 0.83');
 
 const winProfile = browser(windows, 1.25, 1920, 1080, {
     ...defaults,
@@ -180,8 +191,9 @@ assert.equal(preview.appended[0].child.href, 'https://example.test/');
 assert.equal(browser(mac, 2, 1440, 900, macSettings, false,
     {query: '?tn_display_density_preview=0.7'}).root.style.zoom, '0.9');
 const adminPreview = browser(mac, 2, 1440, 900, macSettings, false,
-    {isAdmin: true, previewAllowed: true, query: '?tn_display_density_preview=0.7'});
+    {isAdmin: true, previewAllowed: true, adminBar: true, query: '?tn_display_density_preview=0.7'});
 assert.equal(adminPreview.root.style.zoom, '0.7');
+assert.equal(adminPreview.adminBarItem.textContent, 'DDS: 0.7');
 assert.equal(adminPreview.appended[0].child.href, 'https://example.test/wp-admin/');
 
 const adminOnly = browser(windows, 1.25, 1920, 1080, {

@@ -3,7 +3,7 @@ Contributors:
 Tags: display, zoom, windows, macos
 Requires at least: 7.0
 Tested up to:
-Stable tag: 0.5.1
+Stable tag: 0.5.2
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -18,6 +18,8 @@ Administrators can save separate calibrations for the browser-observed Windows o
 
 Sliders move in 0.1 steps. Exact values can still be entered in the paired number fields. Each display calibration offers a Frontend, WordPress admin, or Both choice. Administrators can preview an unsaved current-display value in the selected area in a new tab, then exit without saving. Both offers separate frontend and admin preview buttons. Windows and Mac each have separate frontend and WordPress admin defaults. Existing frontend settings are preserved; older installations that enabled the global admin option retain those values in both areas.
 
+Administrators see the current effective scaling as a small DDS item in the WordPress admin bar, including during temporary previews.
+
 Browser data cannot reliably identify operating-system display scaling on every monitor. These settings provide a practical approximation.
 
 == Installation ==
@@ -26,6 +28,9 @@ Browser data cannot reliably identify operating-system display scaling on every 
 2. Open Appearance > Display Density to adjust the Windows and Mac values if needed.
 
 == Changelog ==
+
+= 0.5.2 =
+* Show effective display scaling in the administrator's WordPress admin bar.
 
 = 0.5.1 =
 * Use one three-way application control per display calibration and scope current-display previews to frontend or admin.
